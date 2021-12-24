@@ -1,6 +1,7 @@
 #include "common.h"
-
 #include "blockFunctions.h"
+#include "sht_file.h"
+
 
 int power_of_two(int power){
     int result=2;
@@ -141,14 +142,13 @@ int get_local_depth(BF_Block* block){
 
 
 
-HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex){
-	
+HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* tupleId){
 	//How many records each D-block can store
 	int total_number_of_records=((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
 
 	//How many bytes are used to store flags
 	int indexes_bytes=total_number_of_records % (sizeof(char)*8) == 0 ? total_number_of_records / (sizeof(char)*8) : total_number_of_records / (sizeof(char)*8) + 1;
-	
+
 	int overflowBlock = 0;
 	int currentId = -1;
 
@@ -169,13 +169,13 @@ HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex){
 
 		for (i=0;i<total_number_of_records;i++) {
 			unsigned char flagValue;
-			
+
 			// i/8 because with different data 'i' might not be 8,so if i is >8 we  access 2nd byte etc...
 			memcpy(&flagValue,c+1+2*sizeof(int)+i/8,sizeof(char));
 
-			flagValue = flagValue << i;
+			flagValue = flagValue << (i - (i/8)*8);
 			flagValue = flagValue >>(sizeof(char)*8-1);
-			
+
 			//if flase flag found, insert record there 
 			if (flagValue == 0) {
 				memcpy(c+1+ 2*sizeof(int)+ indexes_bytes+ i*sizeof(Record),record,sizeof(Record));
@@ -187,6 +187,7 @@ HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex){
 				BF_Block_Destroy(&nextBlock);
 
 				free(rec);
+				*tupleId = ((blockIndex+1)*total_number_of_records + i);
 				return HT_OK;
 
 			}else{
@@ -254,6 +255,9 @@ HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex){
 		BF_Block_Destroy(&newBlock);
 		CALL_BF(BF_UnpinBlock(nextBlock));
 		BF_Block_Destroy(&nextBlock);
+		//*
+		*tupleId = (blockIndex+1)*total_number_of_records;
+		//*
 		return HT_OK;
 	}
 	BF_Block_Destroy(&nextBlock);
@@ -262,8 +266,9 @@ HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex){
 
 
 // diaxorismos twn deiktwn se dyo isa yposynola me kathena na deixnei ena apo tous 2 kadous
-HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key){
+HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key,UpdateRecordArray* updateArray){
 
+	int tupleId;
 
 	BF_Block* newBucket;
 	BF_Block_Init(&newBucket);
@@ -406,6 +411,9 @@ HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* reco
 	int overflowBlock = 0;
 
 	int startingBlock=index_to_bucket;
+	
+	int updateCounter = 0;
+
 	//In the below part is the re-insertion of each record + the new one
 	do{ 
 		Record* old_records = malloc(sizeof(Record));
@@ -436,9 +444,17 @@ HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* reco
 			CALL_HT(BlockHeaderUpdate(old_bucket,i,0));
 			CALL_BF(BF_UnpinBlock(old_bucket));
 			BF_Block_Destroy(&old_bucket);
+			
 
 			CALL_HT(BucketStatsUpdate(indexDesc,index_to_bucket));	//gia na enimerothoun ta stats, afoy 'bgike' mia eggrafi
-			CALL_HT(HT_InsertEntry(indexDesc,*old_records));
+			CALL_HT(HT_InsertEntry(indexDesc,*old_records,&tupleId, updateArray));
+			
+			
+			memcpy(updateArray[updateCounter].city,old_records->city,20);
+			memcpy(updateArray[updateCounter].surname,old_records->surname,20);
+			updateArray[updateCounter].oldTupleId = ((startingBlock+1)*number_of_records + i);
+			updateArray[updateCounter].newTupleId = tupleId;
+			updateCounter++;
 		}
 
 		// Check if the block has an overflow block
@@ -456,9 +472,10 @@ HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* reco
 		startingBlock = overflowBlock;
 	}while(overflowBlock != 0);
 
-	if (HT_InsertEntry(indexDesc,*record) == HT_OK )
+	if (HT_InsertEntry(indexDesc,*record,&tupleId,updateArray) == HT_OK ){
 		return HT_OK;
-	
+	}
+
 	return HT_ERROR;
 }
 

@@ -208,7 +208,7 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 }
 
 
-HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
+HT_ErrorCode HT_InsertEntry(int indexDesc, Record record,int* tupleId,UpdateRecordArray* updateArray) {
 	unsigned int key = hash_id(record.id);	//hash record id
 
 	int gdepth = get_global_depth(openFiles[indexDesc]->fd);
@@ -245,20 +245,20 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record) {
 	BF_Block_Destroy(&block);
 	
 		//if there is free space in the block, insert the new record
-	if (insert_record(&record, indexDesc , block_index) == HT_OK) {
+	if (insert_record(&record, indexDesc , block_index, tupleId) == HT_OK) {
 		return HT_OK;
 	}
 	else {	// if no free space is available
 		
 		if (ldepth < gdepth){	//1st case
 			int buddies_number= power_of_two(gdepth)/power_of_two(ldepth);
-			arrange_buckets(indexDesc,buddies_number,&record,key);		//split the bucket
+			arrange_buckets(indexDesc,buddies_number,&record,key,updateArray);		//split the bucket
 																		// increase bucket's depth
 																		// re-insert record
 		}
 		else{	//aextend hash table and try to re-insert the record
 			extend_hash_table(openFiles[indexDesc]->fd);
-			return HT_InsertEntry(indexDesc,record);
+			return HT_InsertEntry(indexDesc,record, tupleId,updateArray);
 		}
 	}
 	

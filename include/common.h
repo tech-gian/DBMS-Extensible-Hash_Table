@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "sht_file.h"
 #pragma once
 
 #define META_BLOCK 0
@@ -76,8 +78,8 @@ int get_global_depth(int fileDesc);
 
 int get_local_depth(BF_Block* block);
 
-HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex);
+HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* tupleId);
 
-HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key);
+HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key,UpdateRecordArray* updateArray);
 
 HT_ErrorCode extend_hash_table(int indexDesc);

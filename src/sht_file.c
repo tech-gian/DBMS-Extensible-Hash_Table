@@ -32,8 +32,8 @@ typedef struct Record {
 } Record;
 
 typedef struct{
-char index-key[20];
-int tupleId;  /*Ακέραιος που προσδιορίζει το block και τη θέση μέσα στο block στην οποία     έγινε η εισαγωγή της εγγραφής στο πρωτεύον ευρετήριο.*/ 
+  char index_key[20];
+  int tupleId;  /*Ακέραιος που προσδιορίζει το block και τη θέση μέσα στο block στην οποία     έγινε η εισαγωγή της εγγραφής στο πρωτεύον ευρετήριο.*/ 
 }SecondaryRecord;
 
 
