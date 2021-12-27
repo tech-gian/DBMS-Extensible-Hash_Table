@@ -4,6 +4,7 @@
 #include <time.h>
 #include "bf.h"
 #include "hash_file.h"
+#include "sht_file.h"
 
 #define RECORDS_NUM 5 // you can change it if you want
 #define GLOBAL_DEPT 1 // you can change it if you want
@@ -73,6 +74,16 @@ int main() {
   Record record;
   srand(12569874);
   int r;
+
+  int tuppleId;
+  
+  UpdateRecordArray* updateArray;
+  updateArray = malloc(sizeof(UpdateRecordArray)*8);
+  for (int i=0;i<8;i++){
+    updateArray[i].oldTupleId = -1;
+    updateArray[i].newTupleId = -1;
+  }
+
   printf("Insert Entries\n");
   for (int id = 0; id < RECORDS_NUM; ++id) {
     // create a record
@@ -84,7 +95,7 @@ int main() {
     r = rand() % 10;
     memcpy(record.city, cities[r], strlen(cities[r]) + 1);
 
-    CALL_OR_DIE(HT_InsertEntry(indexDesc, record));
+    CALL_OR_DIE(HT_InsertEntry(indexDesc, record,&tuppleId,updateArray));
   }
 
   printf("RUN PrintAllEntries\n");
