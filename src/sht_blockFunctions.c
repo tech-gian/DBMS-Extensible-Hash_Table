@@ -1,7 +1,11 @@
-#include "blockFunctions.h"
+#include "sht_blockFunctions.h"
 
 
-HT_ErrorCode BlockHeaderInit(BF_Block* block, char type) {
+// TODO: CHECK all files. Where you use indexDesc (position in the array) instead of the FileDesc returned from BF_CreateFile(), CHANGE IT
+
+
+
+HT_ErrorCode SHT_BlockHeaderInit(BF_Block* block, char type, char* attrName, char* primaryFilename) {
 	char* data = BF_Block_GetData(block);
 
 	// Depending on the type of the Block,
@@ -14,7 +18,7 @@ HT_ErrorCode BlockHeaderInit(BF_Block* block, char type) {
 		int temp = 0;
 		memcpy(data+1, &temp, sizeof(int));
 		memcpy(data+1 + 1*sizeof(int), &ld, sizeof(int));
-		int numberOfFlags = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
+		int numberOfFlags = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(SecondaryRecord)*8 + 1);
 		int numberOfBytesFlags = numberOfFlags % (sizeof(char)*8) == 0 ? numberOfFlags / (sizeof(char)*8) : numberOfFlags / (sizeof(char)*8) + 1;
 		for (int i=0 ; i<numberOfBytesFlags ; ++i) {
 			int temp = 0;
@@ -35,12 +39,34 @@ HT_ErrorCode BlockHeaderInit(BF_Block* block, char type) {
 			memcpy(data+1 + i*sizeof(int), &temp, sizeof(int));
 		}
 		break;
-	case 'm':
+	case 's':
 		memcpy(data, &type, sizeof(char));
 		for (int i=0 ; i<3 ; ++i) {
 			int temp = 0;
 			memcpy(data+1 + i*sizeof(int), &temp, sizeof(int));
 		}
+        // Add, 1 byte for hashKey
+        if (strcmp(attrName, 'surname') == 0) {
+            unsigned char temp = Surname;
+            memcpy(data+1+3*sizeof(int), &temp, sizeof(char));
+        }
+        else if (strcmp(attrName, 'city') == 0) {
+            unsigned char temp = City;
+            memcpy(data+1+3*sizeof(int), &temp, sizeof(char));
+        }
+        else {
+            return HT_ERROR;
+        }
+
+		if (strlen(primaryFilename) < 20) {
+			memcpy(data+2+3*sizeof(int), primaryFilename, 20*sizeof(char));
+		}
+		else {
+			memcpy(data+2+3*sizeof(int), primaryFilename, 19*sizeof(char));
+			char lastChar = '\0';
+			memcpy(data+2+3*sizeof(int)+19*sizeof(char), &lastChar, sizeof(char));
+		}
+        // TODO: Add this to documentation
 		break;
 	}
 	BF_Block_SetDirty(block);
@@ -49,7 +75,8 @@ HT_ErrorCode BlockHeaderInit(BF_Block* block, char type) {
 }
 
 
-HT_ErrorCode BlockHeaderUpdate(BF_Block* block, int flagPosition, char value) {
+
+HT_ErrorCode SHT_BlockHeaderUpdate(BF_Block* block, int flagPosition, char value) {
 	// Changes only blocks of type 'D'
 	char* data = BF_Block_GetData(block);
 	int nByte = flagPosition / 8;
@@ -59,7 +86,7 @@ HT_ErrorCode BlockHeaderUpdate(BF_Block* block, int flagPosition, char value) {
 	char flags;
 	memcpy(&flags, data+1+2*sizeof(int)+nByte, sizeof(char));
 
-	int nBit = flagPosition -nByte*8;
+	int nBit = flagPosition;
 	if (value == 0) {
 		value = ((char)1) << (7 - nBit);
 		flags = flags & (~value);
@@ -74,6 +101,7 @@ HT_ErrorCode BlockHeaderUpdate(BF_Block* block, int flagPosition, char value) {
 	
 	return HT_OK;
 }
+
 
 
 HT_ErrorCode BucketStatsInit(int indexDesc, int id) {
@@ -105,7 +133,7 @@ HT_ErrorCode BucketStatsInit(int indexDesc, int id) {
 	BF_Block* newBlock;
 	BF_Block_Init(&newBlock);
 
-	numberOfStructs = lastMBlock == 0 ? (BF_BLOCK_SIZE - sizeof(char) - 3*sizeof(int)) / sizeof(Statistics) : (BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) / sizeof(Statistics);
+	numberOfStructs = lastMBlock == 0 ? (BF_BLOCK_SIZE - 22*sizeof(char) - 3*sizeof(int)) / sizeof(Statistics) : (BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) / sizeof(Statistics);
 
     if (oldSizeOfMBlock == numberOfStructs) {
         CALL_BF(BF_AllocateBlock(indexDesc, newBlock));
@@ -115,7 +143,7 @@ HT_ErrorCode BucketStatsInit(int indexDesc, int id) {
 		newBlockID--;
 		memcpy(data+1, &newBlockID, sizeof(int));
 
-		// Changing lastMblockPointer of the first 'm'Block
+		// Changing lastMblockPointer of the first 's' Block
 		memcpy(firstData+1+2*sizeof(int), &newBlockID, sizeof(int));
 
         CALL_HT(BlockHeaderInit(newBlock, 'M'));
@@ -123,7 +151,8 @@ HT_ErrorCode BucketStatsInit(int indexDesc, int id) {
     }
 
 	int numberOfInts = data == firstData ? 3 : 2;
-	numberOfStructs = (BF_BLOCK_SIZE - sizeof(char) - numberOfInts*sizeof(int)) / sizeof(Statistics);
+    int numberOfChars = data == firstData ? 22 : 1;
+	numberOfStructs = (BF_BLOCK_SIZE - numberOfChars*sizeof(char) - numberOfInts*sizeof(int)) / sizeof(Statistics);
 	
 
 	// Initializing values of current Statistics
@@ -143,7 +172,7 @@ HT_ErrorCode BucketStatsInit(int indexDesc, int id) {
 	memcpy(&sizeOfMBlock, data+1+1*sizeof(int), sizeof(int));
 	++sizeOfMBlock;
 	memcpy(data+1+1*sizeof(int), &sizeOfMBlock, sizeof(int));
-    memcpy(data+1+numberOfInts*sizeof(int) + (sizeOfMBlock-1)*sizeof(Statistics), stats, sizeof(Statistics));
+    memcpy(data+numberOfChars+numberOfInts*sizeof(int) + (sizeOfMBlock-1)*sizeof(Statistics), stats, sizeof(Statistics));
 
 
 	if (oldSizeOfMBlock == numberOfStructs) {
@@ -165,7 +194,9 @@ HT_ErrorCode BucketStatsInit(int indexDesc, int id) {
 }
 
 
-HT_ErrorCode BucketStatsUpdate(int indexDesc, int id) {
+
+
+HT_ErrorCode SHT_BucketStatsUpdate(int indexDesc, int id) {
 	int numberOfStructs;
 
 	BF_Block* block;
@@ -185,11 +216,12 @@ HT_ErrorCode BucketStatsUpdate(int indexDesc, int id) {
 		}
 
 		int numberOfInts = mblock == 0 ? 3 : 2;
-		numberOfStructs = (BF_BLOCK_SIZE - sizeof(char) - numberOfInts*sizeof(int)) / sizeof(Statistics);
+        int numberOfChars = mblock == 0 ? 22 : 1;
+		numberOfStructs = (BF_BLOCK_SIZE - numberOfChars*sizeof(char) - numberOfInts*sizeof(int)) / sizeof(Statistics);
 
 		// Searching each Statistics of each MBlock to find given id
 		for (int i=0 ; i<numberOfStructs ; ++i) {
-			memcpy(stats, data+1+numberOfInts*sizeof(int) + i*sizeof(Statistics), sizeof(Statistics));
+			memcpy(stats, data+numberOfChars+numberOfInts*sizeof(int) + i*sizeof(Statistics), sizeof(Statistics));
 
 			if (stats->bucketID == id) {
 				positionDblock = i;
@@ -215,7 +247,7 @@ HT_ErrorCode BucketStatsUpdate(int indexDesc, int id) {
 	BF_Block* dblock;
 	BF_Block_Init(&dblock);
 	CALL_BF(BF_GetBlock(indexDesc, id, dblock));
-	int numberOfRecords = count_flags(dblock, false);
+	int numberOfRecords = count_flags(dblock, true);
 	CALL_BF(BF_UnpinBlock(dblock));
 	BF_Block_Destroy(&dblock);
 
@@ -233,8 +265,9 @@ HT_ErrorCode BucketStatsUpdate(int indexDesc, int id) {
 	}
 
 	int numberOfInts = mblock == 0 ? 3 : 2;
+    int numberOfChars = mblock == 0 ? 22 : 1;
 
-	memcpy(data+1 + numberOfInts*sizeof(int) + positionDblock*sizeof(Statistics), stats, sizeof(Statistics));
+	memcpy(data+ numberOfChars + numberOfInts*sizeof(int) + positionDblock*sizeof(Statistics), stats, sizeof(Statistics));
 	BF_Block_SetDirty(block);
 	CALL_BF(BF_UnpinBlock(block));
 	BF_Block_Destroy(&block);
@@ -242,3 +275,5 @@ HT_ErrorCode BucketStatsUpdate(int indexDesc, int id) {
 
 	return HT_OK;
 }
+
+
