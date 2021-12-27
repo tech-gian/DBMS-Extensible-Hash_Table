@@ -59,7 +59,7 @@ HT_ErrorCode BlockHeaderUpdate(BF_Block* block, int flagPosition, char value) {
 	char flags;
 	memcpy(&flags, data+1+2*sizeof(int)+nByte, sizeof(char));
 
-	int nBit = flagPosition;
+	int nBit = flagPosition -nByte*8;
 	if (value == 0) {
 		value = ((char)1) << (7 - nBit);
 		flags = flags & (~value);

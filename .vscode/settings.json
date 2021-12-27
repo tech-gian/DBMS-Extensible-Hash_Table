@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "sht_file.h": "c",
+        "hash_file.h": "c"
+    }
+}

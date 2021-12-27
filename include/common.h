@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "sht_file.h"
 #pragma once
 
 #define META_BLOCK 0
@@ -47,6 +49,7 @@ struct record {
 int power_of_two(int power);
 
 int hash_id(unsigned int id);
+uint hash_string(char* value);
 
 
 // This function calculates how many Records exist in block
@@ -68,7 +71,7 @@ HT_ErrorCode BlockHeaderUpdate(BF_Block* block, int flagPosition, char value);
 
 
 ////////////////////////////
-// Functions for InsertEntry
+// Functions for primary hash table InsertEntry
 
 int find_hash_table_block(int indexDesc, unsigned int key);
 
@@ -76,8 +79,17 @@ int get_global_depth(int fileDesc);
 
 int get_local_depth(BF_Block* block);
 
-HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex);
+HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* tupleId);
 
-HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key);
+HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key,UpdateRecordArray* updateArray);
 
 HT_ErrorCode extend_hash_table(int indexDesc);
+
+////////////////////////////
+// Functions for secondary hash table InsertEntry
+
+HT_ErrorCode sht_insert_record(Record* record, int indexDesc, int blockIndex);
+
+HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key);
+
+HT_ErrorCode sht_extend_hash_table(int indexDesc);

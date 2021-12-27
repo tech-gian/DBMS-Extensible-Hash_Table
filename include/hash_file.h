@@ -2,6 +2,7 @@
 #define HASH_FILE_H
 
 #include "bf.h"
+// #include "sht_file.h"
 
 #define MAX_OPEN_FILES 20
 
@@ -16,6 +17,14 @@ typedef struct Record {
 	char surname[20];
 	char city[20];
 } Record;
+
+typedef struct {  //μπορειτε να αλλαξετε τη δομη συμφωνα  με τις ανάγκες σας
+	char surname[20];
+	char city[20];
+	int oldTupleId; // η παλια θέση της εγγραφής πριν την εισαγωγή της νέας
+	int newTupleId; // η νέα θέση της εγγραφής που μετακινήθηκε μετα την εισαγωγή της νέας εγγραφής 
+	
+} UpdateRecordArray;
 
 
 /*
@@ -60,7 +69,9 @@ HT_ErrorCode HT_CloseFile(
  */
 HT_ErrorCode HT_InsertEntry(
 	int indexDesc,	/* θέση στον πίνακα με τα ανοιχτά αρχεία */
-	Record record		/* δομή που προσδιορίζει την εγγραφή */
+	Record record,		/* δομή που προσδιορίζει την εγγραφή */
+	int* tupleId,
+	UpdateRecordArray* updateArray
 	);
 
 /*

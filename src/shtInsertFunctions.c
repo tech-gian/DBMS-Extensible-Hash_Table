@@ -1,148 +1,20 @@
 #include "common.h"
 #include "blockFunctions.h"
 #include "sht_file.h"
+// #include "hash_file.h"
 
-
-int power_of_two(int power){
-    int result=2;
-	if(power == 0)
-		return 1;
-	while(--power){
-		result*=2;
-	}
-	return result;
-}
-
-// online source
-int hash_id(unsigned int id){
-	id = ((id >> 16) ^ id) * 0x45d9f3b;
-    id = ((id >> 16) ^ id) * 0x45d9f3b;
-    id = (id >> 16) ^ id;
-    return id;
-}
-
-int count_flags(BF_Block* block) {
-	int numberOfFlags = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
-	int numberOfBytesFlags = numberOfFlags % (sizeof(char)*8) == 0 ? numberOfFlags / (sizeof(char)*8) : numberOfFlags / (sizeof(char)*8) + 1;
-	int counter = 0;
-
-	// Iteration of all the flagBytes and checking how many
-	// flags (1 bits) exist
-	char* data = BF_Block_GetData(block);
-	for (int i=0 ; i<numberOfBytesFlags ; ++i) {
-		unsigned char flagByte;
-
-		for (int j=0 ; j<8 ; ++j) {
-			memcpy(&flagByte, data+1+2*sizeof(int) + i, sizeof(char));
-			flagByte = flagByte << j;
-			flagByte = flagByte >> 7;
-			if (flagByte == 1) {
-				++counter;
-			}
-		}
-	}
-	CALL_BF(BF_UnpinBlock(block));
-
-	return counter;
+// from chatziko
+uint hash_string(char* value) {
+	// djb2 hash function, απλή, γρήγορη, και σε γενικές γραμμές αποδοτική
+    uint hash = 5381;
+    for (char* s = value; *s != '\0'; s++)
+		hash = (hash << 5) + hash + *s;			// hash = (hash * 33) + *s. Το foo << 5 είναι γρηγορότερη εκδοχή του foo * 32.
+    return hash;
 }
 
 
+HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int blockIndex){
 
-
-// Functions for InsertEntry
-
-//pairnei to kleidi apo tin hash function kai epistrefei to id tou bucket pou tha mpei i eggrafi
-// px an to key = 0100, tha epistrafei to 5o bucket
-
-int find_hash_table_block(int indexDesc,unsigned int key){
-
-	int currentNumberOfBuckets;	// deixnei poios einai o arithmos twn buckets sto yparxon hash table block
-	
-	BF_Block* block;
-	BF_Block_Init(&block);
-	
-	// BF_GetBlock(open_files[indexDesc],1,block);	//to proto block typou H einai to block me id=1
-
-	int nextHtBlock=1;	//to proto HT block id
-	int positionIndex=0;
-	
-	//an exoume pano apo ena HT epeidi den xorane ola ta buckets se ena mono HT
-	do {
-		CALL_BF (BF_GetBlock(openFiles[indexDesc]->fd,nextHtBlock,block));	// pare to block me id = nextHtBlock
-		
-		char* c = BF_Block_GetData(block);
-		memcpy(&currentNumberOfBuckets,c+1+sizeof(int)*2,sizeof(int));	//grapse stin metabliti current number of buckets, posous koybades exei to paron HT
-		int index_to_bucket;
-		memcpy(&nextHtBlock,c+1,sizeof(int));	//grapse stin metabliti current block, poio einai to epomeno block typou H
-
-		
-		for(int i=0;i<currentNumberOfBuckets;i++){
-
-			if( positionIndex == key){	
-				memcpy(&index_to_bucket,c+1+sizeof(int)*3+i*sizeof(int),sizeof(int));
-				CALL_BF(BF_UnpinBlock(block));
-				BF_Block_Destroy(&block);
-				return index_to_bucket;
-			}
-			positionIndex++;
-			
-		}
-
-		CALL_BF(BF_UnpinBlock(block));
-	} while(nextHtBlock != 0);
-	BF_Block_Destroy(&block);
-	return -1;	//se periptosi lathous pou den yparxei tetoio key
-}
-
-
-int get_global_depth(int fileDesc){
-	BF_Block* block;
-	BF_Block_Init(&block);
-
-	//to global depth to pairno apo to block me id=1
-	CALL_BF(BF_GetBlock(fileDesc, 1, block));
-	char* c= BF_Block_GetData(block);
-	
-	char type;
-	memcpy(&type,c,sizeof(char));
-	
-	//Se periptosi pou to block den einai typou 'H'
-	if(type != 'H'){
-		return -1;
-	}
-
-
-	
-	
-	int gd;
-	memcpy(&gd,c+1+sizeof(int),sizeof(int));
-	
-	CALL_BF(BF_UnpinBlock(block));	//to kano unpin, den to xreiazomai allo
-	BF_Block_Destroy(&block);
-	return gd;
-}
-
-
-//epistrefei to local depth tou block block
-int get_local_depth(BF_Block* block){
-
-	char* c= BF_Block_GetData(block);
-	char type;
-	memcpy(&type,c,sizeof(char));
-	
-	//Se periptosi pou to block den einai typou 'D'
-	if(type != 'D'){
-		return -1;
-	}
-	
-	int ld;
-	memcpy(&ld,c+1+sizeof(int),sizeof(int));
-	return ld;
-}
-
-
-
-HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* tupleId){
 	//How many records each D-block can store
 	int total_number_of_records=((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
 
@@ -158,7 +30,7 @@ HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* t
 	BF_Block* nextBlock;
 	BF_Block_Init(&nextBlock);
 
-	Record* rec = malloc( sizeof(Record) );
+	SecondaryRecord*  rec = malloc( sizeof(Record) );
 	int i;
 
 	//do..while in case overflow block exists, as i explain in README
@@ -264,9 +136,8 @@ HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* t
 	return HT_ERROR;
 }
 
+HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,SecondaryRecord* record,unsigned int key){
 
-// diaxorismos twn deiktwn se dyo isa yposynola me kathena na deixnei ena apo tous 2 kadous
-HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key,UpdateRecordArray* updateArray){
 
 	int tupleId;
 
@@ -416,7 +287,7 @@ HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* reco
 
 	//In the below part is the re-insertion of each record + the new one
 	do{ 
-		Record* old_records = malloc(sizeof(Record));
+		SecondaryRecord*  old_records = malloc(sizeof(Record));
 	
 		for (int i=0;i<number_of_records;i++) {
 			
@@ -480,8 +351,7 @@ HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* reco
 }
 
 
-
-HT_ErrorCode extend_hash_table(int indexDesc){
+HT_ErrorCode sht_extend_hash_table(int indexDesc){
 
 	int maxNumberOfBuckets = (BF_BLOCK_SIZE - 1 - 3*sizeof(int))/sizeof(int); // poios einai o megistos arithmos apo buckets pou xoraei kathe hash table
 	int currentNumberOfBuckets;	// poios einai o arithmos apo buckets pou exei to hash table
@@ -587,6 +457,3 @@ HT_ErrorCode extend_hash_table(int indexDesc){
 	BF_Block_Destroy(&block);
 	
 }
-
-// ----------------------------------------
-// ----------------------------------------
