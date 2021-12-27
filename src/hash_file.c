@@ -32,6 +32,8 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 	// Create block 1(M block)
 	CALL_BF(BF_AllocateBlock(fileDescriptor, currentBlock));
 	if (BlockHeaderInit(currentBlock, 'm') != HT_OK) {
+		CALL_BF(BF_UnpinBlock(currentBlock));
+		BF_Block_Destroy(&currentBlock);
 		return HT_ERROR;
 	}
 	CALL_BF(BF_UnpinBlock(currentBlock));
@@ -40,6 +42,8 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 	// Create block 2 (Hash Table)
 	CALL_BF(BF_AllocateBlock(fileDescriptor, currentHashBlock));
 	if (BlockHeaderInit(currentHashBlock, 'H') != HT_OK) {
+		CALL_BF(BF_UnpinBlock(currentHashBlock));
+		BF_Block_Destroy(&currentHashBlock);
 		return HT_ERROR;
 	}
 
@@ -114,6 +118,8 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 			BF_Block_Init(&newHashBlock);
 			CALL_BF(BF_AllocateBlock(fileDescriptor, newHashBlock));
 			if (BlockHeaderInit(newHashBlock, 'H') != HT_OK) {
+				CALL_BF(BF_UnpinBlock(newHashBlock));
+				BF_Block_Destroy(newHashBlock);
 				return HT_ERROR;
 			}
 			

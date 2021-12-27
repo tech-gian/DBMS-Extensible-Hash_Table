@@ -98,10 +98,11 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
     // Create block 1 (s block)
     CALL_BF(BF_AllocateBlock(fileDescriptor, block1));
     if(SHT_BlockHeaderInit(block1, 's', attrName, fileName) != HT_OK){
+		CALL_BF(BF_UnpinBlock(block1));
+		BF_Block_Destroy(&block1);
 		return HT_ERROR;
 	}
 
-	CALL_BF(BF_UnpinBlock(block1));
     CALL_BF(BF_UnpinBlock(block1));
 	BF_Block_Destroy(&block1);
 
@@ -111,6 +112,8 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
     // Create block 2 (Hash Table)
 	CALL_BF(BF_AllocateBlock(fileDescriptor, currentHashBlock));
 	if (SHT_BlockHeaderInit(currentHashBlock, 'H', attrName, fileName) != HT_OK) {
+		CALL_BF(BF_UnpinBlock(currentHashBlock));
+		BF_Block_Destroy(&currentHashBlock);
 		return HT_ERROR;
 	}
 
@@ -183,6 +186,8 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
 			BF_Block_Init(&newHashBlock);
 			CALL_BF(BF_AllocateBlock(fileDescriptor, newHashBlock));
 			if (SHT_BlockHeaderInit(newHashBlock, 'H', attrName, fileName) != HT_OK) {
+				CALL_BF(BF_UnpinBlock(newHashBlock));
+				BF_Block_Destroy(newHashBlock);
 				return HT_ERROR;
 			}
 			
@@ -245,7 +250,7 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
 
 
     int primaryTotalBlocks = 0;
-    CALLBF(BF_GetBlockCounter(primaryFD, &primaryTotalBlocks));
+    CALL_BF(BF_GetBlockCounter(primaryFD, &primaryTotalBlocks));
 
     // Just to see how many bytes of ευρετήριο we have
 	int numberOfFlags = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(struct record)*8 + 1);
