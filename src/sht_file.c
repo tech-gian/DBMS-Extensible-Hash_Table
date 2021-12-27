@@ -60,7 +60,7 @@ HT_ErrorCode SHT_CloseSecondaryIndex(int indexDesc) {
 HT_ErrorCode SHT_SecondaryInsertEntry (int indexDesc,SecondaryRecord record  ) {
 	//insert code here
 	// //! den einai record id, alla to pedio pou kanoume hash. Tha to paro apo gianni
-	unsigned int key = hash_string(record.id);	//hash record id
+	unsigned int key = hash_string(record.index_key);	//hash record id
 
 	int gdepth = get_global_depth(openFiles[indexDesc]->fd);
 
