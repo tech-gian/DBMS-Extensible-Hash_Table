@@ -11,7 +11,9 @@
 
 HT_ErrorCode HT_Init() {
 	openFilesCount = 0;
-
+    for(int i = 0; i < MAX_OPEN_FILES; ++i){
+        openFiles[i] = NULL;
+    }
 	return HT_OK;
 }
 
@@ -162,11 +164,21 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
 	}
 
 	// Check if file is already open
-	for (int i=0 ; i<openFilesCount ; ++i) {
+	for (int i = 0; i < MAX_OPEN_FILES; ++i) {
 		if (!strcmp(openFiles[i]->name, fileName)) {
 			return HT_ERROR;
 		}
 	}
+
+    int destIndex = -1;
+    for (int i = 0; i < MAX_OPEN_FILES; ++i) {
+		if (openFiles[i] == NULL) {
+			destIndex = i;
+            break;
+		}
+	}
+    if(destIndex == -1)
+        return HT_ERROR;
 
 	int fileDescriptor;
 	CALL_BF(BF_OpenFile(fileName, &fileDescriptor));
@@ -181,10 +193,10 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
 		return HT_ERROR;
 	}
 
-	openFiles[openFilesCount] = currentFile;
+	openFiles[destIndex] = currentFile;
 
-	strcpy(openFiles[openFilesCount]->name, fileName);
-	openFiles[openFilesCount]->fd = fileDescriptor;
+	strcpy(openFiles[destIndex]->name, fileName);
+	openFiles[destIndex]->fd = fileDescriptor;
 	++openFilesCount;
 	*indexDesc = fileDescriptor;
 	
@@ -193,7 +205,7 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
 
 
 HT_ErrorCode HT_CloseFile(int indexDesc) {
-	if (indexDesc >= openFilesCount) {
+	if (indexDesc >= MAX_OPEN_FILES) {
 		return HT_ERROR;
 	}
 	CALL_BF(BF_CloseFile(openFiles[indexDesc]->fd));
@@ -202,6 +214,7 @@ HT_ErrorCode HT_CloseFile(int indexDesc) {
 		free(openFiles[indexDesc]->name);
 	}
 	free(openFiles[indexDesc]);
+    openFiles[indexDesc] = NULL;
 	--openFilesCount;
 
 	return HT_OK;
