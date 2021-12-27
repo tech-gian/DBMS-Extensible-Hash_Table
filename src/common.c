@@ -21,8 +21,23 @@ int hash_id(unsigned int id){
     return id;
 }
 
-int count_flags(BF_Block* block) {
-	int numberOfFlags = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
+// online source
+uint hash_string(char* value) {
+	// djb2 hash function, απλή, γρήγορη, και σε γενικές γραμμές αποδοτική
+    uint hash = 5381;
+    for (char* s = value; *s != '\0'; s++)
+		hash = (hash << 5) + hash + *s;			// hash = (hash * 33) + *s. Το foo << 5 είναι γρηγορότερη εκδοχή του foo * 32.
+    return hash;
+}
+
+int count_flags(BF_Block* block, bool sht) {
+	int numberOfFlags;
+	if (sht == true) {
+		numberOfFlags = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(SecondaryRecord)*8 + 1);
+	}
+	else {
+		numberOfFlags = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
+	}
 	int numberOfBytesFlags = numberOfFlags % (sizeof(char)*8) == 0 ? numberOfFlags / (sizeof(char)*8) : numberOfFlags / (sizeof(char)*8) + 1;
 	int counter = 0;
 
