@@ -1,7 +1,7 @@
 #include "bf.h"
 #include "common.h"
 #include "sht_blockFunctions.h"
-
+// #include "usefull.h"
 
 #define MAX_OPEN_FILES 20
 
@@ -18,22 +18,22 @@
 #define HASH_FILE_H
 
 
-typedef enum HT_ErrorCode {
-  HT_OK,
-  HT_ERROR
-} HT_ErrorCode;
+// typedef enum HT_ErrorCode {
+//   HT_OK,
+//   HT_ERROR
+// } HT_ErrorCode;
 
-typedef struct Record {
-	int id;
-	char name[15];
-	char surname[20];
-	char city[20];
-} Record;
+// typedef struct Record {
+// 	int id;
+// 	char name[15];
+// 	char surname[20];
+// 	char city[20];
+// } Record;
 
-typedef struct{
-	char index_key[20];
-	int tupleId;  /*Ακέραιος που προσδιορίζει το block και τη θέση μέσα στο block στην οποία     έγινε η εισαγωγή της εγγραφής στο πρωτεύον ευρετήριο.*/ 
-}SecondaryRecord;
+// typedef struct{
+// 	char index_key[20];
+// 	int tupleId;  /*Ακέραιος που προσδιορίζει το block και τη θέση μέσα στο block στην οποία     έγινε η εισαγωγή της εγγραφής στο πρωτεύον ευρετήριο.*/ 
+// }SecondaryRecord;
 
 
 
@@ -109,7 +109,7 @@ HT_ErrorCode SHT_SecondaryInsertEntry (int indexDesc,SecondaryRecord record  ) {
 		}
 		else{	//aextend hash table and try to re-insert the record
 			sht_extend_hash_table(openFiles[indexDesc]->fd);
-			return SHT_InsertEntry(indexDesc,record);
+			return SHT_SecondaryInsertEntry(indexDesc,record);
 		}
 	}
 	
@@ -157,7 +157,7 @@ HT_ErrorCode SHT_SecondaryUpdateEntry (int indexDesc, UpdateRecordArray *updateA
 
 		do{
 			BF_GetBlock(indexDesc,bucketIndex,block);
-			char blockData = BF_Block_GetData(block);
+			char* blockData = BF_Block_GetData(block);
 			memcpy(&overflowBlock,blockData+1,sizeof(int));
 			bucketIndex = overflowBlock;
 

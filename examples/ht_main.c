@@ -6,6 +6,8 @@
 #include "hash_file.h"
 #include "sht_file.h"
 
+#pragma once
+
 #define RECORDS_NUM 5 // you can change it if you want
 #define GLOBAL_DEPT 1 // you can change it if you want
 #define FILE_NAME "data.db"
