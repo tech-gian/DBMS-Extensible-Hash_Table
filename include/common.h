@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "sht_file.h"
+// #include "sht_file.h"
 #pragma once
 
 #define META_BLOCK 0
@@ -99,9 +99,9 @@ HT_ErrorCode extend_hash_table(int indexDesc);
 ////////////////////////////
 // Functions for secondary hash table InsertEntry
 
-HT_ErrorCode sht_insert_record(Record* record, int indexDesc, int blockIndex);
+HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int blockIndex);
 
-HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key);
+HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,SecondaryRecord* record,unsigned int key);
 
 HT_ErrorCode sht_extend_hash_table(int indexDesc);
 

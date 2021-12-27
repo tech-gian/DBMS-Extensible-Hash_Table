@@ -16,13 +16,15 @@ uint hash_string(char* value) {
 HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int blockIndex){
 
 	//How many records each D-block can store
-	int total_number_of_records=((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
+	int total_number_of_records=((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(SecondaryRecord)*8 + 1);
 
 	//How many bytes are used to store flags
 	int indexes_bytes=total_number_of_records % (sizeof(char)*8) == 0 ? total_number_of_records / (sizeof(char)*8) : total_number_of_records / (sizeof(char)*8) + 1;
 
 	int overflowBlock = 0;
-	int currentId = -1;
+	// int currentId = -1;
+	char* currentIndexKey = malloc(sizeof(char)*20+1); //* +1 for '\0'
+	strcpy(currentIndexKey,"NONE");
 
 	bool overflowFlag = true;
 	bool first = false;
@@ -30,7 +32,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 	BF_Block* nextBlock;
 	BF_Block_Init(&nextBlock);
 
-	SecondaryRecord*  rec = malloc( sizeof(Record) );
+	SecondaryRecord*  rec = malloc( sizeof(SecondaryRecord) );
 	int i;
 
 	//do..while in case overflow block exists, as i explain in README
@@ -50,7 +52,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 
 			//if flase flag found, insert record there 
 			if (flagValue == 0) {
-				memcpy(c+1+ 2*sizeof(int)+ indexes_bytes+ i*sizeof(Record),record,sizeof(Record));
+				memcpy(c+1+ 2*sizeof(int)+ indexes_bytes+ i*sizeof(SecondaryRecord),record,sizeof(SecondaryRecord));
 				CALL_HT(BlockHeaderUpdate(nextBlock,i,1));
 
 				CALL_HT(BucketStatsUpdate(indexDesc, blockIndex));
@@ -59,19 +61,20 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 				BF_Block_Destroy(&nextBlock);
 
 				free(rec);
-				*tupleId = ((blockIndex+1)*total_number_of_records + i);
 				return HT_OK;
 
 			}else{
 				//if no space to insert the record is available, we must examine if all the current records have the same id
 				//if the answer is yes, we must create an overflow block
-				memcpy(rec,c+1+2*sizeof(int)+indexes_bytes+i*sizeof(Record),sizeof(Record));
-				if((rec->id != currentId) && (currentId != -1)){
+				memcpy(rec,c+1+2*sizeof(int)+indexes_bytes+i*sizeof(SecondaryRecord),sizeof(SecondaryRecord));
+				if((strcmp(rec->index_key,currentIndexKey) != 0 )&& s(trcmp(currentIndexKey,"NONE") != 0) ){
 					overflowFlag = false;
-					currentId = rec->id;
+					// currentId = rec->index_key;
+					strcpy(currentIndexKey,rec->index_key);
 				}
 				else if(first == false){
-					currentId = rec->id;
+					// currentId = rec->index_key;
+					strcpy(currentIndexKey,rec->index_key);
 					first = true;
 				}
 			}
@@ -116,7 +119,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 		CALL_BF(BF_UnpinBlock(nextBlock));
 
 		char* newData = BF_Block_GetData(newBlock);
-		memcpy(newData+1+2*sizeof(int)+indexes_bytes,record,sizeof(Record));
+		memcpy(newData+1+2*sizeof(int)+indexes_bytes,record,sizeof(SecondaryRecord));
 		memcpy(newData+1+sizeof(int),&local_depth,sizeof(int));
 
 		//New record inserted, so update the position flag
@@ -127,9 +130,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 		BF_Block_Destroy(&newBlock);
 		CALL_BF(BF_UnpinBlock(nextBlock));
 		BF_Block_Destroy(&nextBlock);
-		//*
-		*tupleId = (blockIndex+1)*total_number_of_records;
-		//*
+
 		return HT_OK;
 	}
 	BF_Block_Destroy(&nextBlock);
@@ -274,7 +275,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 
 
 	// How many records can type D block store
-	int number_of_records=((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
+	int number_of_records=((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(SecondaryRecord)*8 + 1);
 
 	//How many bytes of a D-block are used to store flags
 	int index_bytes=number_of_records % (sizeof(char)*8) == 0 ? number_of_records / (sizeof(char)*8) : number_of_records / (sizeof(char)*8) + 1;
@@ -287,7 +288,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 
 	//In the below part is the re-insertion of each record + the new one
 	do{ 
-		SecondaryRecord*  old_records = malloc(sizeof(Record));
+		SecondaryRecord*  old_records = malloc(sizeof(SecondaryRecord));
 	
 		for (int i=0;i<number_of_records;i++) {
 			
@@ -311,21 +312,21 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 			}
 			
 			// remove record, set its flag to false and re-insert it
-			memcpy(old_records,c+1+2*sizeof(int) + index_bytes+sizeof(Record)*i,sizeof(Record));
+			memcpy(old_records,c+1+2*sizeof(int) + index_bytes+sizeof(SecondaryRecord)*i,sizeof(SecondaryRecord));
 			CALL_HT(BlockHeaderUpdate(old_bucket,i,0));
 			CALL_BF(BF_UnpinBlock(old_bucket));
 			BF_Block_Destroy(&old_bucket);
 			
 
 			CALL_HT(BucketStatsUpdate(indexDesc,index_to_bucket));	//gia na enimerothoun ta stats, afoy 'bgike' mia eggrafi
-			CALL_HT(HT_InsertEntry(indexDesc,*old_records,&tupleId, updateArray));
+			CALL_HT(SHT_SecondaryInsertEntry(indexDesc,*old_records));
 			
 			
-			memcpy(updateArray[updateCounter].city,old_records->city,20);
-			memcpy(updateArray[updateCounter].surname,old_records->surname,20);
-			updateArray[updateCounter].oldTupleId = ((startingBlock+1)*number_of_records + i);
-			updateArray[updateCounter].newTupleId = tupleId;
-			updateCounter++;
+			// memcpy(updateArray[updateCounter].city,old_records->city,20);
+			// memcpy(updateArray[updateCounter].surname,old_records->surname,20);
+			// updateArray[updateCounter].oldTupleId = ((startingBlock+1)*number_of_records + i);
+			// updateArray[updateCounter].newTupleId = tupleId;
+			// updateCounter++;
 		}
 
 		// Check if the block has an overflow block
@@ -343,7 +344,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 		startingBlock = overflowBlock;
 	}while(overflowBlock != 0);
 
-	if (HT_InsertEntry(indexDesc,*record,&tupleId,updateArray) == HT_OK ){
+	if (SHT_SecondaryInsertEntry(indexDesc,*record) == HT_OK ){
 		return HT_OK;
 	}
 
