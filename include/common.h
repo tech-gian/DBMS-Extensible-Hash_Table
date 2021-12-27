@@ -17,8 +17,18 @@ struct openFile {
 	int fd;
 	char *name;
 };
+
+struct openSHTFile {
+	int fd;
+	char *name;
+    char *primaryName;
+};
+
 int openFilesCount;
 struct openFile* openFiles[MAX_OPEN_FILES];
+
+int openSHTFilesCount;
+struct openSHTFile* openSHTFiles[MAX_OPEN_FILES];
 
 struct record {
 	int id;
