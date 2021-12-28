@@ -400,6 +400,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
 	++openSHTFilesCount;
 	*indexDesc = sFileDescriptor;
 	
+    BF_Block_Destroy(&block1);
     return HT_OK;
 }
 
