@@ -4,10 +4,12 @@
 #include <time.h>
 #include "bf.h"
 #include "hash_file.h"
+#include "sht_file.h"
 
-#define RECORDS_NUM 1000 // you can change it if you want
-#define GLOBAL_DEPT 2 // you can change it if you want
-#define FILE_NAME "data.db"
+
+#define RECORDS_NUM 10 // you can change it if you want
+#define GLOBAL_DEPT 1 // you can change it if you want
+#define FILE_NAME "Sec_data.db"
 
 const char* names[] = {
   "Yannis",
@@ -62,5 +64,11 @@ const char* cities[] = {
   }
 
 int main() {
+	BF_Init(LRU);
+  
+	CALL_OR_DIE(SHT_Init());
 
+	int indexDesc;
+	// CALL_OR_DIE(SHT_CreateIndex(FILE_NAME, GLOBAL_DEPT));
+	// CALL_OR_DIE(SHT_OpenIndex(FILE_NAME, &indexDesc)); 
 }

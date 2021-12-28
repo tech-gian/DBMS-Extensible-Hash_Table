@@ -1,6 +1,6 @@
 sht:
 	@echo " Compile ht_main ...";
-	gcc -I ./include/ -L ./lib/ -Wl,-rpath,./lib/ ./examples/sht_main.c ./src/hash_file.c ./src/sht_file.c ./src/common.c ./src/blockFunctions.c -lbf -o ./build/runner -O2
+	gcc -I ./include/ -L ./lib/ -Wl,-rpath,./lib/ ./examples/sht_main.c ./src/hash_file.c ./src/sht_file.c ./src/common.c ./src/blockFunctions.c ./src/sht_blockFunctions.c ./src/shtInsertFunctions.c -lbf -o ./build/runner -O2
 
 ht: clean
 	@echo " Compile ht_main ...";

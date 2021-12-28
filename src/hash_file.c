@@ -119,7 +119,7 @@ HT_ErrorCode HT_CreateIndex(const char *filename, int depth) {
 			CALL_BF(BF_AllocateBlock(fileDescriptor, newHashBlock));
 			if (BlockHeaderInit(newHashBlock, 'H') != HT_OK) {
 				CALL_BF(BF_UnpinBlock(newHashBlock));
-				BF_Block_Destroy(newHashBlock);
+				BF_Block_Destroy(&newHashBlock);
 				return HT_ERROR;
 			}
 			
