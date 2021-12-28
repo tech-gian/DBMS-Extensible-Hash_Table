@@ -67,7 +67,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 				//if no space to insert the record is available, we must examine if all the current records have the same id
 				//if the answer is yes, we must create an overflow block
 				memcpy(rec,c+1+2*sizeof(int)+indexes_bytes+i*sizeof(SecondaryRecord),sizeof(SecondaryRecord));
-				if((strcmp(rec->index_key,currentIndexKey) != 0 )&& s(trcmp(currentIndexKey,"NONE") != 0) ){
+				if((strcmp(rec->index_key,currentIndexKey) != 0 )&& (strcmp(currentIndexKey,"NONE") != 0) ){
 					overflowFlag = false;
 					// currentId = rec->index_key;
 					strcpy(currentIndexKey,rec->index_key);
@@ -301,7 +301,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 			memcpy(&flagValue,c+1+2*sizeof(int)+i/8,sizeof(char));
 
 			// Check if the flag is true or false
-			flagValue = flagValue << i;
+			flagValue = flagValue << (i%8);
 			flagValue = flagValue >>7;
 
 			// if flag is false there is no record in position 'i'
@@ -320,13 +320,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 
 			CALL_HT(BucketStatsUpdate(indexDesc,index_to_bucket));	//gia na enimerothoun ta stats, afoy 'bgike' mia eggrafi
 			CALL_HT(SHT_SecondaryInsertEntry(indexDesc,*old_records));
-			
-			
-			// memcpy(updateArray[updateCounter].city,old_records->city,20);
-			// memcpy(updateArray[updateCounter].surname,old_records->surname,20);
-			// updateArray[updateCounter].oldTupleId = ((startingBlock+1)*number_of_records + i);
-			// updateArray[updateCounter].newTupleId = tupleId;
-			// updateCounter++;
+
 		}
 
 		// Check if the block has an overflow block

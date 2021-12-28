@@ -168,7 +168,7 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
 			BF_Block_SetDirty(newBucket);
 			CALL_BF(BF_UnpinBlock(newBucket));
 
-			CALL_HT(BucketStatsInit(fileDescriptor, blockCounter));
+			CALL_HT(SHT_BucketStatsInit(fileDescriptor, blockCounter));
 		}
 
 		BF_Block_Destroy(&newBucket);
@@ -189,7 +189,7 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
 			CALL_BF(BF_AllocateBlock(fileDescriptor, newHashBlock));
 			if (SHT_BlockHeaderInit(newHashBlock, 'H', attrName, fileName) != HT_OK) {
 				CALL_BF(BF_UnpinBlock(newHashBlock));
-				BF_Block_Destroy(newHashBlock);
+				BF_Block_Destroy(&newHashBlock);
 				return HT_ERROR;
 			}
 			
@@ -222,7 +222,7 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
     // Open this file that we have not yet created, so that SHT_SecondaryInsertEntry can insert records to it
     
     // Create SHT structure and update the openSHTFiles array
-    struct openSHTFile *currentFile = sizeof(struct openSHTFile);
+    struct openSHTFile *currentFile = malloc(sizeof(struct openSHTFile));
 
 	currentFile->name = malloc(strlen(sfileName) + 1);
 	if (currentFile->name == NULL) {
@@ -347,7 +347,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
     BF_Block_Init(&block1);
     CALL_BF(BF_GetBlock(sFileDescriptor, 0, block1));
     char *data = BF_Block_GetData(block1);
-    char primaryFileName = malloc((strlen(data+2+3*sizeof(int)) + 1) * sizeof(char));
+    char* primaryFileName = malloc((strlen(data+2+3*sizeof(int)) + 1) * sizeof(char));
     if(primaryFileName == NULL)
         return HT_ERROR;
     strncpy(primaryFileName, data+2+3*sizeof(int), 20);
@@ -369,7 +369,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
     }
 
     // Create SHT structure and update the openSHTFiles array
-    struct openSHTFile *currentFile = sizeof(struct openSHTFile);
+    struct openSHTFile *currentFile = malloc(sizeof(struct openSHTFile));
 
 	currentFile->name = malloc(strlen(sfileName) + 1);
 	if (currentFile->name == NULL) {
@@ -400,7 +400,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
 	++openSHTFilesCount;
 	*indexDesc = sFileDescriptor;
 	
-    BF_Block_Destroy(&block1);
+	BF_Block_Destroy(&block1);
     return HT_OK;
 }
 
@@ -423,7 +423,7 @@ HT_ErrorCode SHT_CloseSecondaryIndex(int indexDesc) {
  
 HT_ErrorCode SHT_SecondaryInsertEntry (int indexDesc,SecondaryRecord record  ) {
 	//insert code here
-	// //! den einai record id, alla to pedio pou kanoume hash. Tha to paro apo gianni
+	
 	unsigned int key = hash_string(record.index_key);	//hash record id
 
 	int gdepth = get_global_depth(openFiles[indexDesc]->fd);
@@ -482,6 +482,17 @@ HT_ErrorCode SHT_SecondaryInsertEntry (int indexDesc,SecondaryRecord record  ) {
 }
 
 HT_ErrorCode SHT_SecondaryUpdateEntry (int indexDesc, UpdateRecordArray *updateArray ) {
+
+	//* take key
+	BF_Block* sblock;
+	BF_Block_Init(&sblock);
+	BF_GetBlock(indexDesc,0,sblock);
+	char* sblockData = BF_Block_GetData(sblock);
+	char attributeKey;
+	memcpy(&attributeKey,sblockData+1+3*sizeof(int),sizeof(char));
+	BF_UnpinBlock(sblock);
+	BF_Block_Destroy(&sblock);
+	//*
   
 	// store global depth information, usefull for hashing
 	int globalDepth = get_global_depth(indexDesc);
@@ -497,10 +508,10 @@ HT_ErrorCode SHT_SecondaryUpdateEntry (int indexDesc, UpdateRecordArray *updateA
 		maxNUmberOfRecordsInSecondary / (sizeof(char)*8) + 1;
 	
 	
-	SecondaryRecord* secRecord = malloc(sizeof(SecondaryRecord));			//! kane to free
+	SecondaryRecord* secRecord = malloc(sizeof(SecondaryRecord));
 	
 	//* an kapoia thesi edo einai true simainei oti exei allaxthei.Os timi mpainei to neo tuppleId
-	bool* confictsArray = malloc(sizeof(bool)* maxNumberOfRecordsInPrimary);	//! kane ton free
+	bool* confictsArray = malloc(sizeof(bool)* maxNumberOfRecordsInPrimary);
 
 	// iterate through records in the secondrary indexes and update these records which changed position due to split
 	// do..while since the same must me done for the overflow buckets as well	
@@ -513,7 +524,12 @@ HT_ErrorCode SHT_SecondaryUpdateEntry (int indexDesc, UpdateRecordArray *updateA
 		}
 		
 		// create key for search
-		unsigned int key = hash_string(updateArray[i].city);
+		unsigned int key;
+		if(attributeKey == 0)
+			key = hash_string(updateArray[i].surname);
+		else
+			key = hash_string(updateArray[i].city);
+		
 		key = key >> (sizeof(int)*8-globalDepth);
 
 		// find which bucket corresponds to this key
@@ -559,6 +575,8 @@ HT_ErrorCode SHT_SecondaryUpdateEntry (int indexDesc, UpdateRecordArray *updateA
 		
 	}
 
+	free(secRecord);
+	free(confictsArray);
 	BF_Block_Destroy(&block);
 	
 	return HT_OK;
@@ -768,7 +786,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 		if (record == NULL) {
 			return HT_ERROR;
 		}
-		char prev_index_key[20] = '0';
+		char prev_index_key[20] = "0";
 
 		for (int i=0 ; i<numberOfBlocks ; ++i) {
 			CALL_BF(BF_GetBlock(sindexDesc1, i, block));
@@ -906,7 +924,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 	CALL_BF(BF_UnpinBlock(block));
 
 	CALL_BF(BF_GetBlock(sindexDesc2, dataBlockPointer2, block));
-	char* data = BF_Block_GetData(block);
+	data = BF_Block_GetData(block);
 	printf("File2: %s\n", openSHTFiles[sindexDesc2]->name);
 	for (int i=0 ; i<numberOfFlags ; ++i) {
 		unsigned char flagValue;
@@ -925,7 +943,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 	}
 	printf("\n");
 	CALL_BF(BF_UnpinBlock(block));
-	BF_Block_Destroy(block);
+	BF_Block_Destroy(&block);
 
 	return HT_OK;
 }

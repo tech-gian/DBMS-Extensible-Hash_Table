@@ -118,8 +118,6 @@ typedef enum HashKey {
 
 
 
-uint hash_string(char* value);
-
 
 /////////////////////
 // Extra-Helping Functions to initialize blocks, based on our structure
