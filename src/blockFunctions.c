@@ -177,7 +177,7 @@ HT_ErrorCode BucketStatsUpdate(int indexDesc, int id) {
 
 	// Searching for the MBlock with this id
 	while (true) {
-		CALL_BF(BF_GetBlock(indexDesc, mblock, block));
+		CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd, mblock, block));
 		data = BF_Block_GetData(block);
 		stats = malloc(sizeof(Statistics));
 		if (stats == NULL) {
@@ -214,7 +214,7 @@ HT_ErrorCode BucketStatsUpdate(int indexDesc, int id) {
 	// Getting DBlock's data (containing given id)
 	BF_Block* dblock;
 	BF_Block_Init(&dblock);
-	CALL_BF(BF_GetBlock(indexDesc, id, dblock));
+	CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd, id, dblock));
 	int numberOfRecords = count_flags(dblock, false);
 	CALL_BF(BF_UnpinBlock(dblock));
 	BF_Block_Destroy(&dblock);

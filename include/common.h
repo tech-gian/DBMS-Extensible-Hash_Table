@@ -85,12 +85,13 @@ int get_local_depth(BF_Block* block);
 
 HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* tupleId);
 
-HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key,UpdateRecordArray* updateArray);
+HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key,UpdateRecordArray* updateArray,int* tupleId);
 
 HT_ErrorCode extend_hash_table(int indexDesc);
 
 ////////////////////////////
 // Functions for secondary hash table InsertEntry
+int sht_find_hash_table_block(int indexDesc,unsigned int key);
 
 HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int blockIndex);
 

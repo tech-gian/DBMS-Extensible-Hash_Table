@@ -101,11 +101,50 @@ int find_hash_table_block(int indexDesc,unsigned int key){
 	return -1;	//se periptosi lathous pou den yparxei tetoio key
 }
 
+int sht_find_hash_table_block(int indexDesc,unsigned int key){
+
+	int currentNumberOfBuckets;	// deixnei poios einai o arithmos twn buckets sto yparxon hash table block
+	
+	BF_Block* block;
+	BF_Block_Init(&block);
+	
+	// BF_GetBlock(open_files[indexDesc],1,block);	//to proto block typou H einai to block me id=1
+
+	int nextHtBlock=1;	//to proto HT block id
+	int positionIndex=0;
+	
+	//an exoume pano apo ena HT epeidi den xorane ola ta buckets se ena mono HT
+	do {
+		CALL_BF (BF_GetBlock(openSHTFiles[indexDesc]->fd,nextHtBlock,block));	// pare to block me id = nextHtBlock
+		
+		char* c = BF_Block_GetData(block);
+		memcpy(&currentNumberOfBuckets,c+1+sizeof(int)*2,sizeof(int));	//grapse stin metabliti current number of buckets, posous koybades exei to paron HT
+		int index_to_bucket;
+		memcpy(&nextHtBlock,c+1,sizeof(int));	//grapse stin metabliti current block, poio einai to epomeno block typou H
+
+		
+		for(int i=0;i<currentNumberOfBuckets;i++){
+
+			if( positionIndex == key){	
+				memcpy(&index_to_bucket,c+1+sizeof(int)*3+i*sizeof(int),sizeof(int));
+				CALL_BF(BF_UnpinBlock(block));
+				BF_Block_Destroy(&block);
+				return index_to_bucket;
+			}
+			positionIndex++;
+			
+		}
+
+		CALL_BF(BF_UnpinBlock(block));
+	} while(nextHtBlock != 0);
+	BF_Block_Destroy(&block);
+	return -1;	//se periptosi lathous pou den yparxei tetoio key
+}
 
 int get_global_depth(int fileDesc){
 	BF_Block* block;
 	BF_Block_Init(&block);
-
+	
 	//to global depth to pairno apo to block me id=1
 	CALL_BF(BF_GetBlock(fileDesc, 1, block));
 	char* c= BF_Block_GetData(block);
@@ -126,6 +165,7 @@ int get_global_depth(int fileDesc){
 	
 	CALL_BF(BF_UnpinBlock(block));	//to kano unpin, den to xreiazomai allo
 	BF_Block_Destroy(&block);
+	
 	return gd;
 }
 
@@ -273,9 +313,9 @@ HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* t
 
 
 // diaxorismos twn deiktwn se dyo isa yposynola me kathena na deixnei ena apo tous 2 kadous
-HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key,UpdateRecordArray* updateArray){
+HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* record,unsigned int key,UpdateRecordArray* updateArray, int* tupleId){
 
-	int tupleId;
+	// int tupleId;
 
 	BF_Block* newBucket;
 	BF_Block_Init(&newBucket);
@@ -454,13 +494,13 @@ HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* reco
 			
 
 			CALL_HT(BucketStatsUpdate(indexDesc,index_to_bucket));	//gia na enimerothoun ta stats, afoy 'bgike' mia eggrafi
-			CALL_HT(HT_InsertEntry(indexDesc,*old_records,&tupleId, updateArray));
+			CALL_HT(HT_InsertEntry(indexDesc,*old_records,tupleId, updateArray));
 			
 			
 			memcpy(updateArray[updateCounter].city,old_records->city,20);
 			memcpy(updateArray[updateCounter].surname,old_records->surname,20);
 			updateArray[updateCounter].oldTupleId = ((startingBlock+1)*number_of_records + i);
-			updateArray[updateCounter].newTupleId = tupleId;
+			updateArray[updateCounter].newTupleId = *tupleId;
 			updateCounter++;
 		}
 
@@ -478,8 +518,8 @@ HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* reco
 
 		startingBlock = overflowBlock;
 	}while(overflowBlock != 0);
-
-	if (HT_InsertEntry(indexDesc,*record,&tupleId,updateArray) == HT_OK ){
+	
+	if (HT_InsertEntry(indexDesc,*record,tupleId,updateArray) == HT_OK ){
 		return HT_OK;
 	}
 
