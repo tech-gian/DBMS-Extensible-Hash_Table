@@ -170,21 +170,11 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
 	}
 
 	// Check if file is already open
-	for (int i = 0; i < MAX_OPEN_FILES; ++i) {
+	for (int i=0 ; i<openFilesCount ; ++i) {
 		if (!strcmp(openFiles[i]->name, fileName)) {
 			return HT_ERROR;
 		}
 	}
-
-    int destIndex = -1;
-    for (int i = 0; i < MAX_OPEN_FILES; ++i) {
-		if (openFiles[i] == NULL) {
-			destIndex = i;
-            break;
-		}
-	}
-    if(destIndex == -1)
-        return HT_ERROR;
 
 	int fileDescriptor;
 	CALL_BF(BF_OpenFile(fileName, &fileDescriptor));
@@ -199,10 +189,10 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
 		return HT_ERROR;
 	}
 
-	openFiles[destIndex] = currentFile;
+	openFiles[openFilesCount] = currentFile;
 
-	strcpy(openFiles[destIndex]->name, fileName);
-	openFiles[destIndex]->fd = fileDescriptor;
+	strcpy(openFiles[openFilesCount]->name, fileName);
+	openFiles[openFilesCount]->fd = fileDescriptor;
 	++openFilesCount;
 	*indexDesc = fileDescriptor;
 	
