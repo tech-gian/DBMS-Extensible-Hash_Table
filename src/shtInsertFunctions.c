@@ -1,6 +1,7 @@
 #include "common.h"
-#include "blockFunctions.h"
+// #include "blockFunctions.h"
 #include "sht_file.h"
+#include "sht_blockFunctions.h"
 // #include "hash_file.h"
 
 // from chatziko
@@ -14,7 +15,6 @@ uint hash_string(char* value) {
 
 
 HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int blockIndex){
-
 	//How many records each D-block can store
 	int total_number_of_records=((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(SecondaryRecord)*8 + 1);
 
@@ -34,11 +34,11 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 
 	SecondaryRecord*  rec = malloc( sizeof(SecondaryRecord) );
 	int i;
-
+	
 	//do..while in case overflow block exists, as i explain in README
 	do{		
 		i=0;
-		BF_GetBlock(indexDesc,blockIndex,nextBlock);
+		BF_GetBlock(openSHTFiles[indexDesc]->fd,blockIndex,nextBlock);
 		char* c = BF_Block_GetData(nextBlock);
 
 		for (i=0;i<total_number_of_records;i++) {
@@ -53,12 +53,14 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 			//if flase flag found, insert record there 
 			if (flagValue == 0) {
 				memcpy(c+1+ 2*sizeof(int)+ indexes_bytes+ i*sizeof(SecondaryRecord),record,sizeof(SecondaryRecord));
-				CALL_HT(BlockHeaderUpdate(nextBlock,i,1));
 
-				CALL_HT(BucketStatsUpdate(indexDesc, blockIndex));
+				CALL_HT(SHT_BlockHeaderUpdate(nextBlock,i,1));
+
+				// CALL_HT(SHT_BucketStatsUpdate(indexDesc, blockIndex));
 
 				CALL_BF(BF_UnpinBlock(nextBlock));
 				BF_Block_Destroy(&nextBlock);
+
 
 				free(rec);
 				return HT_OK;
@@ -92,28 +94,28 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 
 	// In case overflow block is needed
 	if((i == total_number_of_records) && (overflowFlag == true)){
-
+		
 		
 		BF_Block* newBlock;
 		BF_Block_Init(&newBlock);
 
-		CALL_BF(BF_GetBlock(indexDesc,blockIndex,nextBlock));
+		CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,blockIndex,nextBlock));
 		char* c = BF_Block_GetData(nextBlock);
 		int local_depth;
 		memcpy(&local_depth,c+1+sizeof(int),sizeof(int));
 
 		//Allocate the new D-block
-		CALL_BF(BF_AllocateBlock(indexDesc,newBlock));
+		CALL_BF(BF_AllocateBlock(openSHTFiles[indexDesc]->fd,newBlock));
 		CALL_HT(BlockHeaderInit(newBlock,'D'));
 		int blockCounter;
-		CALL_BF(BF_GetBlockCounter(indexDesc,&blockCounter));
+		CALL_BF(BF_GetBlockCounter(openSHTFiles[indexDesc]->fd,&blockCounter));
 		blockCounter--;
 
 		//connect the new D-block with the previous one
 		memcpy(c+1,&blockCounter,sizeof(int));
 
-		//call bucketStatsInit because new D-block created
-		CALL_HT(BucketStatsInit(indexDesc, blockCounter));
+		//call SHT_BucketStatsInit because new D-block created
+		// CALL_HT(SHT_BucketStatsInit(openSHTFiles[indexDesc]->fd, blockCounter));
 		
 		BF_Block_SetDirty(nextBlock);
 		CALL_BF(BF_UnpinBlock(nextBlock));
@@ -123,8 +125,8 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 		memcpy(newData+1+sizeof(int),&local_depth,sizeof(int));
 
 		//New record inserted, so update the position flag
-		CALL_HT(BlockHeaderUpdate(newBlock,0,1));
-		CALL_HT(BucketStatsUpdate(indexDesc, blockCounter));
+		CALL_HT(SHT_BlockHeaderUpdate(newBlock,0,1));
+		// CALL_HT(SHT_BucketStatsUpdate(indexDesc, blockCounter));
 
 		CALL_BF(BF_UnpinBlock(newBlock));
 		BF_Block_Destroy(&newBlock);
@@ -146,17 +148,18 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 	BF_Block_Init(&newBucket);
 	
 	//create new bucket
-	CALL_BF(BF_AllocateBlock(openFiles[indexDesc]->fd,newBucket));
 	
+	CALL_BF(BF_AllocateBlock(openSHTFiles[indexDesc]->fd,newBucket));
+
 	//initilize it to type D
 	CALL_HT(BlockHeaderInit(newBucket,'D'));	
 
 	//store new bucket id
 	int newBucketPosition;	
 	
-	CALL_BF(BF_GetBlockCounter(openFiles[indexDesc]->fd,&newBucketPosition));
+	CALL_BF(BF_GetBlockCounter(openSHTFiles[indexDesc]->fd,&newBucketPosition));
 	newBucketPosition--;
-	CALL_HT(BucketStatsInit(indexDesc,newBucketPosition));	//prosthese to bucket se block typou M gia ta stats
+	// CALL_HT(SHT_BucketStatsInit(indexDesc,newBucketPosition));	//prosthese to bucket se block typou M gia ta stats
 
 
 	//Unpin block since its data is changed
@@ -168,7 +171,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 	BF_Block_Init(&block);
 
 	//  store which bucket, buddies points to
-	int index_to_bucket= find_hash_table_block(indexDesc,key);
+	int index_to_bucket= sht_find_hash_table_block(indexDesc,key);
 
 	//Now we must find in which position of the block table, buddies start
 
@@ -182,7 +185,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 	// so we can make half of buddies points to the new bucket
 	//The use of do..while is essential since more than one hash table blocks can exist.
 	do{
-		CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd,next_HT,block));
+		CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,next_HT,block));
 		char* c = BF_Block_GetData(block);
 		int currentNumberOfBuckets;
 		memcpy(&currentNumberOfBuckets,c+1+2*sizeof(int),sizeof(int));
@@ -215,7 +218,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 
 	//make half buddies points to the new bucket we created
 	do{
-		CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd,next_HT,block));
+		CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,next_HT,block));
 		char* c = BF_Block_GetData(block);
 		int currentNumberOfBuckets;
 		memcpy(&currentNumberOfBuckets,c+1+2*sizeof(int),sizeof(int));
@@ -249,7 +252,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 
 	BF_Block* old_bucket;
 	BF_Block_Init(&old_bucket);
-	CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd,index_to_bucket,old_bucket));
+	CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,index_to_bucket,old_bucket));
 
 	char* c = BF_Block_GetData(old_bucket);
 	
@@ -263,7 +266,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 	CALL_BF(BF_UnpinBlock(old_bucket));
 	BF_Block_Destroy(&old_bucket);
 
-	CALL_BF(BF_GetBlock(indexDesc,newBucketPosition,newBucket));
+	CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,newBucketPosition,newBucket));
 
 	// update local depth of the new bucket too
 	char* newBucketData = BF_Block_GetData(newBucket);
@@ -293,7 +296,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 		for (int i=0;i<number_of_records;i++) {
 			
 			BF_Block_Init(&old_bucket);
-			CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd,startingBlock,old_bucket));
+			CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,startingBlock,old_bucket));
 			c = BF_Block_GetData(old_bucket);
 			
 			unsigned char flagValue;
@@ -313,19 +316,19 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 			
 			// remove record, set its flag to false and re-insert it
 			memcpy(old_records,c+1+2*sizeof(int) + index_bytes+sizeof(SecondaryRecord)*i,sizeof(SecondaryRecord));
-			CALL_HT(BlockHeaderUpdate(old_bucket,i,0));
+			CALL_HT(SHT_BlockHeaderUpdate(old_bucket,i,0));
 			CALL_BF(BF_UnpinBlock(old_bucket));
 			BF_Block_Destroy(&old_bucket);
 			
 
-			CALL_HT(BucketStatsUpdate(indexDesc,index_to_bucket));	//gia na enimerothoun ta stats, afoy 'bgike' mia eggrafi
+			// CALL_HT(SHT_BucketStatsUpdate(indexDesc,index_to_bucket));	//gia na enimerothoun ta stats, afoy 'bgike' mia eggrafi
 			CALL_HT(SHT_SecondaryInsertEntry(indexDesc,*old_records));
 
 		}
 
 		// Check if the block has an overflow block
 		BF_Block_Init(&old_bucket);
-		CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd,startingBlock,old_bucket));
+		CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,startingBlock,old_bucket));
 		c = BF_Block_GetData(old_bucket);	
 
 		memcpy(&overflowBlock,c+1,sizeof(int));
@@ -347,7 +350,6 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 
 
 HT_ErrorCode sht_extend_hash_table(int indexDesc){
-
 	int maxNumberOfBuckets = (BF_BLOCK_SIZE - 1 - 3*sizeof(int))/sizeof(int); // poios einai o megistos arithmos apo buckets pou xoraei kathe hash table
 	int currentNumberOfBuckets;	// poios einai o arithmos apo buckets pou exei to hash table
 	int newHT=1;	// poio block typou Hash table einai meta. An einai 0 simainei oti den yparxei allo
@@ -357,12 +359,12 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc){
 	char* c;
 	int global_depth;
 	int newIndexes;
-
-	CALL_BF(BF_GetBlock(indexDesc,1,block));
+	
+	CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,1,block));
 	c= BF_Block_GetData(block);
 
 
-	global_depth = get_global_depth(indexDesc);
+	global_depth = get_global_depth(openSHTFiles[indexDesc]->fd);
 	if(global_depth == -1){
 		return HT_ERROR;
 	}
@@ -376,7 +378,7 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc){
 	int arrayCounter = 0;
 	do{	
 
-		CALL_BF(BF_GetBlock(indexDesc,newHT,block));
+		CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,newHT,block));
 		c = BF_Block_GetData(block);
 		memcpy(&currentNumberOfBuckets, c+1+2*sizeof(int),sizeof(int));
 		
@@ -405,7 +407,7 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc){
 	//antigrafo apo ton pinaka piso sto hash table, apla epeidi egine extend 2 diadoxikes theseis tha deixnoyn ston idio bucket 
 	do{
 		
-		CALL_BF(BF_GetBlock(indexDesc,newHT,block));
+		CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,newHT,block));
 		c = BF_Block_GetData(block);
 		memcpy(c+1+sizeof(int),&global_depth,sizeof(int));
 		
@@ -427,13 +429,12 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc){
 		
 		//an exoume akoma eggrafes na prosthesoume alla oxi diathesimo block gia to hash table, ftiaxnoume ena
 		if((newHT==0) && (j< arrayCounter)){
-
 			int blockCounter;
 			BF_Block* newHashBlock;
 			
 			BF_Block_Init(&newHashBlock);
-			CALL_BF(BF_AllocateBlock(indexDesc,newHashBlock));
-			CALL_BF(BF_GetBlockCounter(indexDesc,&blockCounter));
+			CALL_BF(BF_AllocateBlock(openSHTFiles[indexDesc]->fd,newHashBlock));
+			CALL_BF(BF_GetBlockCounter(openSHTFiles[indexDesc]->fd,&blockCounter));
 			
 			blockCounter--;
 			CALL_HT(BlockHeaderInit(newHashBlock,'H'));
@@ -450,5 +451,5 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc){
 	}while( j < arrayCounter );
 	free(indexArray);
 	BF_Block_Destroy(&block);
-	
+
 }

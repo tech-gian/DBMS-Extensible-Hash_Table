@@ -252,7 +252,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record,int* tupleId,UpdateReco
 
 	CALL_BF(BF_UnpinBlock(block));	
 	BF_Block_Destroy(&block);
-	
+
 		//if there is free space in the block, insert the new record
 	if (insert_record(&record, indexDesc , block_index, tupleId) == HT_OK) {
 		return HT_OK;
@@ -261,7 +261,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record,int* tupleId,UpdateReco
 		
 		if (ldepth < gdepth){	//1st case
 			int buddies_number= power_of_two(gdepth)/power_of_two(ldepth);
-			arrange_buckets(indexDesc,buddies_number,&record,key,updateArray);		//split the bucket
+			arrange_buckets(indexDesc,buddies_number,&record,key,updateArray,tupleId);		//split the bucket
 																		// increase bucket's depth
 																		// re-insert record
 		}
@@ -320,9 +320,9 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
 					free(record);
 					continue;
 				}
-
+				int tupleId = ((i+1)*numberOfFlags + j);
 				memcpy(record, data+1+2*sizeof(int)+numberOfBytesFlags + j*sizeof(Record), sizeof(Record));
-				printf("Record with id: %d, name: %s, surname: %s and city: %s in bucket: %d\n", record->id, record->name, record->surname, record->city, i);
+				printf("Record with id: %d, name: %s, surname: %s and city: %s in bucket: %d with tupleId %d\n", record->id, record->name, record->surname, record->city, i,tupleId);
 				free(record);
 			}
 

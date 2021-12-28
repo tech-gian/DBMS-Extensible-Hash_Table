@@ -87,7 +87,7 @@ HT_ErrorCode SHT_BlockHeaderUpdate(BF_Block* block, int flagPosition, char value
 	char flags;
 	memcpy(&flags, data+1+2*sizeof(int)+nByte, sizeof(char));
 
-	int nBit = flagPosition;
+	int nBit = flagPosition -nByte*8;
 	if (value == 0) {
 		value = ((char)1) << (7 - nBit);
 		flags = flags & (~value);
@@ -105,7 +105,7 @@ HT_ErrorCode SHT_BlockHeaderUpdate(BF_Block* block, int flagPosition, char value
 
 
 
-HT_ErrorCode SHT_BucketStatsInit(int indexDesc, int id) {
+HT_ErrorCode SHT_BucketStatsInit(int fileDesc, int id) {
     int numberOfStructs;
 	BF_Block* mblock;
     BF_Block_Init(&mblock);
@@ -113,7 +113,7 @@ HT_ErrorCode SHT_BucketStatsInit(int indexDesc, int id) {
 	BF_Block_Init(&firstBlock);
 
 	// Getting the last MBlock of the file
-	CALL_BF(BF_GetBlock(indexDesc, 0, firstBlock));
+	CALL_BF(BF_GetBlock(fileDesc, 0, firstBlock));
 	char* firstData = BF_Block_GetData(firstBlock);
 
 	char* data;
@@ -121,7 +121,7 @@ HT_ErrorCode SHT_BucketStatsInit(int indexDesc, int id) {
 	memcpy(&lastMBlock, firstData+1+2*sizeof(int), sizeof(int));
 
 	if (lastMBlock != 0) {
-		CALL_BF(BF_GetBlock(indexDesc, lastMBlock, mblock));
+		CALL_BF(BF_GetBlock(fileDesc, lastMBlock, mblock));
 		data = BF_Block_GetData(mblock);
 	}
 	else {
@@ -137,10 +137,10 @@ HT_ErrorCode SHT_BucketStatsInit(int indexDesc, int id) {
 	numberOfStructs = lastMBlock == 0 ? (BF_BLOCK_SIZE - 22*sizeof(char) - 3*sizeof(int)) / sizeof(Statistics) : (BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) / sizeof(Statistics);
 
     if (oldSizeOfMBlock == numberOfStructs) {
-        CALL_BF(BF_AllocateBlock(indexDesc, newBlock));
+        CALL_BF(BF_AllocateBlock(fileDesc, newBlock));
 		
         int newBlockID;
-        CALL_BF(BF_GetBlockCounter(indexDesc, &newBlockID));
+        CALL_BF(BF_GetBlockCounter(fileDesc, &newBlockID));
 		newBlockID--;
 		memcpy(data+1, &newBlockID, sizeof(int));
 
@@ -209,7 +209,7 @@ HT_ErrorCode SHT_BucketStatsUpdate(int indexDesc, int id) {
 
 	// Searching for the MBlock with this id
 	while (true) {
-		CALL_BF(BF_GetBlock(indexDesc, mblock, block));
+		CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd, mblock, block));
 		data = BF_Block_GetData(block);
 		stats = malloc(sizeof(Statistics));
 		if (stats == NULL) {
@@ -247,7 +247,7 @@ HT_ErrorCode SHT_BucketStatsUpdate(int indexDesc, int id) {
 	// Getting DBlock's data (containing given id)
 	BF_Block* dblock;
 	BF_Block_Init(&dblock);
-	CALL_BF(BF_GetBlock(indexDesc, id, dblock));
+	CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd, id, dblock));
 	int numberOfRecords = count_flags(dblock, true);
 	CALL_BF(BF_UnpinBlock(dblock));
 	BF_Block_Destroy(&dblock);
