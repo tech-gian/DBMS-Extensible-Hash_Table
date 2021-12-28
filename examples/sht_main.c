@@ -4,10 +4,13 @@
 #include <time.h>
 #include "bf.h"
 #include "hash_file.h"
+#include "sht_file.h"
 
-#define RECORDS_NUM 1000 // you can change it if you want
-#define GLOBAL_DEPT 2 // you can change it if you want
-#define FILE_NAME "data.db"
+
+#define RECORDS_NUM 10 // you can change it if you want
+#define GLOBAL_DEPT 1 // you can change it if you want
+#define PRIMARY_FILE_NAME "data.db"
+#define SECONDARY_FILE_NAME "Sec_data.db"
 
 const char* names[] = {
   "Yannis",
@@ -62,5 +65,45 @@ const char* cities[] = {
   }
 
 int main() {
+	BF_Init(LRU);
+  
+	CALL_OR_DIE(HT_Init());
+
+	int indexDesc;
+	CALL_OR_DIE(HT_CreateIndex(PRIMARY_FILE_NAME, GLOBAL_DEPT));
+	CALL_OR_DIE(HT_OpenIndex(PRIMARY_FILE_NAME, &indexDesc)); 
+	
+	Record record;
+	srand(12569874);
+	int r;
+
+	int tuppleId;
+	
+	// UpdateRecordArray* updateArray;
+	// updateArray = malloc(sizeof(UpdateRecordArray)*8);
+	// for (int i=0;i<8;i++){
+	// 	updateArray[i].oldTupleId = -1;
+	// 	updateArray[i].newTupleId = -1;
+	// }
+
+	// printf("Insert Entries\n");
+	// for (int id = 0; id < RECORDS_NUM; ++id) {
+	// 	// create a record
+	// 	record.id = id;
+	// 	r = rand() % 12;
+	// 	memcpy(record.name, names[r], strlen(names[r]) + 1);
+	// 	r = rand() % 12;
+	// 	memcpy(record.surname, surnames[r], strlen(surnames[r]) + 1);
+	// 	r = rand() % 10;
+	// 	memcpy(record.city, cities[r], strlen(cities[r]) + 1);
+
+	// 	CALL_OR_DIE(HT_InsertEntry(indexDesc, record,&tuppleId,updateArray));
+	// }
+
+	//  printf("RUN PrintAllEntries\n");
+	// int id = rand() % RECORDS_NUM;
+	// CALL_OR_DIE(HT_PrintAllEntries(indexDesc, NULL));
+
+
 
 }

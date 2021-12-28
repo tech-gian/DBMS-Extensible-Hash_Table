@@ -45,12 +45,13 @@ HT_ErrorCode SHT_BlockHeaderInit(BF_Block* block, char type, char* attrName, cha
 			int temp = 0;
 			memcpy(data+1 + i*sizeof(int), &temp, sizeof(int));
 		}
-        // Add, 1 byte for hashKey
-        if (strcmp(attrName, 'surname') == 0) {
+        
+		// Add, 1 byte for hashKey
+        if (strcmp(attrName, "surname") == 0) {
             unsigned char temp = Surname;
             memcpy(data+1+3*sizeof(int), &temp, sizeof(char));
         }
-        else if (strcmp(attrName, 'city') == 0) {
+        else if (strcmp(attrName, "city") == 0) {
             unsigned char temp = City;
             memcpy(data+1+3*sizeof(int), &temp, sizeof(char));
         }
@@ -104,7 +105,7 @@ HT_ErrorCode SHT_BlockHeaderUpdate(BF_Block* block, int flagPosition, char value
 
 
 
-HT_ErrorCode BucketStatsInit(int indexDesc, int id) {
+HT_ErrorCode SHT_BucketStatsInit(int indexDesc, int id) {
     int numberOfStructs;
 	BF_Block* mblock;
     BF_Block_Init(&mblock);
