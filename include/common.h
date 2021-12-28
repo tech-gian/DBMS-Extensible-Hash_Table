@@ -18,17 +18,10 @@ struct openFile {
 	char *name;
 };
 
-struct openSHTFile {
-	int fd;
-	char *name;
-    char *primaryName;
-};
 
 int openFilesCount;
 struct openFile* openFiles[MAX_OPEN_FILES];
 
-int openSHTFilesCount;
-struct openSHTFile* openSHTFiles[MAX_OPEN_FILES];
 
 struct record {
 	int id;
@@ -109,9 +102,14 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc);
 ////////////////////////////////
 // SHT_FILE
 
-int SHT_openFilesCount;
-struct openFile* SHT_openFiles[MAX_OPEN_FILES];
+struct openSHTFile {
+	int fd;
+	char *name;
+    char *primaryName;
+};
 
+int openSHTFilesCount;
+struct openSHTFile* openSHTFiles[MAX_OPEN_FILES];
 
 typedef enum HashKey {
   Surname,

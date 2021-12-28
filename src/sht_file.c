@@ -565,7 +565,7 @@ HT_ErrorCode SHT_SecondaryUpdateEntry (int indexDesc, UpdateRecordArray *updateA
 
 
 HT_ErrorCode SHT_PrintAllEntries(int sindexDesc, char *index_key ) {
-  	if (sindexDesc >= SHT_openFilesCount) {
+  	if (sindexDesc >= openSHTFilesCount) {
 		return HT_ERROR;
 	}
 
@@ -678,9 +678,9 @@ HT_ErrorCode SHT_PrintAllEntries(int sindexDesc, char *index_key ) {
 HT_ErrorCode SHT_HashStatistics(char *filename ) {
 	int sindexDesc;
 	// We found the indexDesc of the file
-	for (int i=0 ; i<SHT_openFilesCount ; ++i) {
-		if (strcmp(SHT_openFiles[i]->name, filename) == 0) {
-			sindexDesc = SHT_openFiles[i]->fd;
+	for (int i=0 ; i<openSHTFilesCount ; ++i) {
+		if (strcmp(openSHTFiles[i]->name, filename) == 0) {
+			sindexDesc = openSHTFiles[i]->fd;
 			break;
 		}
 	}
@@ -740,7 +740,7 @@ HT_ErrorCode SHT_HashStatistics(char *filename ) {
 }
 
 HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
-	if (sindexDesc1 >= SHT_openFilesCount || sindexDesc2 >= SHT_openFilesCount) {
+	if (sindexDesc1 >= openSHTFilesCount || sindexDesc2 >= openSHTFilesCount) {
 		return HT_ERROR;
 	}
 
@@ -885,7 +885,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 
 	CALL_BF(BF_GetBlock(sindexDesc1, dataBlockPointer1, block));
 	char* data = BF_Block_GetData(block);
-	printf("File1: %s\n", SHT_openFiles[sindexDesc1]->name);
+	printf("File1: %s\n", openSHTFiles[sindexDesc1]->name);
 	for (int i=0 ; i<numberOfFlags ; ++i) {
 		unsigned char flagValue;
 		memcpy(&flagValue, data+1+2*sizeof(int)+i/8, sizeof(char));
@@ -906,7 +906,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 
 	CALL_BF(BF_GetBlock(sindexDesc2, dataBlockPointer2, block));
 	char* data = BF_Block_GetData(block);
-	printf("File2: %s\n", SHT_openFiles[sindexDesc2]->name);
+	printf("File2: %s\n", openSHTFiles[sindexDesc2]->name);
 	for (int i=0 ; i<numberOfFlags ; ++i) {
 		unsigned char flagValue;
 		memcpy(&flagValue, data+1+2*sizeof(int)+i/8, sizeof(char));
