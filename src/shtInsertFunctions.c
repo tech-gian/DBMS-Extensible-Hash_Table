@@ -44,7 +44,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 		for (i=0;i<total_number_of_records;i++) {
 			unsigned char flagValue;
 
-			// i/8 because with different data 'i' might not be 8,so if i is >8 we  access 2nd byte etc...
+			// i/8 because with different data 'i' might not be 8,so if i is > 8 we  access 2nd byte etc...
 			memcpy(&flagValue,c+1+2*sizeof(int)+i/8,sizeof(char));
 
 			flagValue = flagValue << (i - (i/8)*8);
@@ -56,7 +56,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 
 				CALL_HT(SHT_BlockHeaderUpdate(nextBlock,i,1));
 
-				// CALL_HT(SHT_BucketStatsUpdate(indexDesc, blockIndex));
+				CALL_HT(SHT_BucketStatsUpdate(indexDesc, blockIndex));
 
 				CALL_BF(BF_UnpinBlock(nextBlock));
 				BF_Block_Destroy(&nextBlock);
@@ -115,7 +115,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 		memcpy(c+1,&blockCounter,sizeof(int));
 
 		//call SHT_BucketStatsInit because new D-block created
-		// CALL_HT(SHT_BucketStatsInit(openSHTFiles[indexDesc]->fd, blockCounter));
+		CALL_HT(SHT_BucketStatsInit(openSHTFiles[indexDesc]->fd, blockCounter));
 		
 		BF_Block_SetDirty(nextBlock);
 		CALL_BF(BF_UnpinBlock(nextBlock));
@@ -126,7 +126,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 
 		//New record inserted, so update the position flag
 		CALL_HT(SHT_BlockHeaderUpdate(newBlock,0,1));
-		// CALL_HT(SHT_BucketStatsUpdate(indexDesc, blockCounter));
+		CALL_HT(SHT_BucketStatsUpdate(indexDesc, blockCounter));
 
 		CALL_BF(BF_UnpinBlock(newBlock));
 		BF_Block_Destroy(&newBlock);
@@ -159,7 +159,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 	
 	CALL_BF(BF_GetBlockCounter(openSHTFiles[indexDesc]->fd,&newBucketPosition));
 	newBucketPosition--;
-	// CALL_HT(SHT_BucketStatsInit(indexDesc,newBucketPosition));	//prosthese to bucket se block typou M gia ta stats
+	CALL_HT(SHT_BucketStatsInit(openSHTFiles[indexDesc]->fd,newBucketPosition));	//prosthese to bucket se block typou M gia ta stats
 
 
 	//Unpin block since its data is changed
@@ -321,7 +321,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 			BF_Block_Destroy(&old_bucket);
 			
 
-			// CALL_HT(SHT_BucketStatsUpdate(indexDesc,index_to_bucket));	//gia na enimerothoun ta stats, afoy 'bgike' mia eggrafi
+			CALL_HT(SHT_BucketStatsUpdate(indexDesc,index_to_bucket));	//gia na enimerothoun ta stats, afoy 'bgike' mia eggrafi
 			CALL_HT(SHT_SecondaryInsertEntry(indexDesc,*old_records));
 
 		}
@@ -451,5 +451,125 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc){
 	}while( j < arrayCounter );
 	free(indexArray);
 	BF_Block_Destroy(&block);
+
+}
+
+
+
+HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
+
+	// openSHTFiles[indexDesc]->name
+	BF_Block* secBlock;
+	BF_Block_Init(&secBlock);
+
+	// take 's' block
+	BF_GetBlock(openSHTFiles[indexDesc]->fd,0,secBlock);
+
+	// take primary indexes name
+	char* sBlockData = BF_Block_GetData(secBlock);
+	char attributeKey;
+	memcpy(&attributeKey,sBlockData+1+3*sizeof(int),sizeof(char));
+
+	BF_UnpinBlock(secBlock);
+
+	char* primaryFileName = malloc(sizeof(char)*20);	//TODO free
+
+	memcpy(primaryFileName,sBlockData+2+3*sizeof(int),20);
+	
+	//prepei na ta psakso ola kai oxi mexri to openFilesCount
+	// apo auti tin diadikasia pairno to indecDesc tou primary
+	int primaryIndexDesc=0;
+	for(int primaryIndexDesc=0; primaryIndexDesc<MAX_OPEN_FILES;primaryIndexDesc++){
+		if((openFiles[primaryIndexDesc] != NULL) && (strcmp(openFiles[primaryIndexDesc]->name,primaryFileName)==0)){
+			break;
+		}
+	}
+	if(primaryIndexDesc == MAX_OPEN_FILES){
+		fprintf(stderr,"Error: Primary index table is closed\n");
+		return HT_ERROR;
+	}
+	//
+	int maxNumberOfRecordsInPrimary = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
+	int blockInPrimary = (record.tupleId/maxNumberOfRecordsInPrimary) - 1;
+	int positionInPrimary = record.tupleId - (blockInPrimary+1)* maxNumberOfRecordsInPrimary;
+	int numberOfFlagsInPrimary = maxNumberOfRecordsInPrimary % (sizeof(char)*8) == 0 ? 
+									maxNumberOfRecordsInPrimary / (sizeof(char)*8) : 
+									maxNumberOfRecordsInPrimary / (sizeof(char)*8) + 1;
+
+
+	BF_Block* primaryBlock;	//!na ginei unpin
+	BF_Block_Init(&primaryBlock);
+	BF_GetBlock(openFiles[primaryIndexDesc]->fd,blockInPrimary,primaryBlock);
+	char* primaryBlockData = BF_Block_GetData(primaryBlock);
+	BF_UnpinBlock(primaryBlock);
+
+	// pairno to flag na do an einai 0. An einai 0 epistrefo HT_ERROR
+	unsigned char flagValue;
+	memcpy(&flagValue,primaryBlockData+1+2*sizeof(int)+positionInPrimary/8,sizeof(char));
+
+	flagValue = flagValue << (positionInPrimary - (positionInPrimary/8)*8);
+	flagValue = flagValue >>(sizeof(char)*8-1);
+
+	if (flagValue == 0){
+		fprintf(stderr,"Error: Invalid tupleId. Position in block is invalid\n");
+		return HT_ERROR;
+	}else{
+		Record primaryRecord;
+		memcpy(&primaryRecord,primaryBlockData+1+ 2*sizeof(int)+ numberOfFlagsInPrimary+ positionInPrimary*sizeof(Record),sizeof(Record));
+		if(attributeKey == 0){
+			if(strcmp(record.index_key,primaryRecord.surname) != 0){
+				fprintf(stderr,"Error: Invalid tupleId. Position in block is invalid\n");
+				return HT_ERROR;
+			}
+		}else if(attributeKey == 1){
+			if(strcmp(record.index_key,primaryRecord.city) != 0){
+				fprintf(stderr,"Error: Invalid tupleId. Position in block is invalid\n");
+				return HT_ERROR;
+			}
+		}
+
+	}
+	//TODO bazo ton elegxo 3
+
+	// Now i must iterate through secondaryIndexes block, to check if there is a record with the same tupleId
+	// if yes, return HT_ERROR
+
+	int maxNUmberOfRecordsInSecondary = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(SecondaryRecord)*8 + 1);
+	
+	int indexesBytesInSec=maxNUmberOfRecordsInSecondary % (sizeof(char)*8) == 0 ? 
+		maxNUmberOfRecordsInSecondary / (sizeof(char)*8) : 
+		maxNUmberOfRecordsInSecondary / (sizeof(char)*8) + 1;
+	
+	unsigned int key;
+	key = key >> (sizeof(int)*8-get_global_depth(openSHTFiles[indexDesc]->fd));
+	
+	// find which bucket corresponds to this key
+	int bucketIndex = sht_find_hash_table_block(indexDesc,key);
+	
+	BF_GetBlock(openSHTFiles[indexDesc]->fd,bucketIndex,secBlock);
+	sBlockData = BF_Block_GetData(secBlock);
+	BF_UnpinBlock(secBlock);
+	SecondaryRecord* secRecord = malloc(sizeof(SecondaryRecord));
+
+	for(int i=0; i<maxNUmberOfRecordsInSecondary;i++){
+		char flagValue;
+		memcpy(&flagValue, sBlockData+1+2*sizeof(int) + i/8, sizeof(char));
+				
+		flagValue = flagValue << (i%8);
+		flagValue = flagValue >> 7;
+		if (flagValue == 0){
+			continue;
+		}
+		memcpy(secRecord,sBlockData+1+2*sizeof(int)+indexesBytesInSec+i*sizeof(SecondaryRecord),sizeof(SecondaryRecord));
+		if(secRecord->tupleId == record.tupleId){
+			fprintf(stderr,"Error: call SHT_SecondaryUpdateEntry and try again\n");
+			return HT_ERROR;
+		}
+	}
+	free(secRecord);
+
+
+	//to be continue
+
 
 }

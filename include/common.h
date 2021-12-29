@@ -99,7 +99,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 
 HT_ErrorCode sht_extend_hash_table(int indexDesc);
 
-
+HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record);
 ////////////////////////////////
 // SHT_FILE
 

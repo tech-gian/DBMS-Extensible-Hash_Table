@@ -168,7 +168,7 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
 			BF_Block_SetDirty(newBucket);
 			CALL_BF(BF_UnpinBlock(newBucket));
 
-			// CALL_HT(SHT_BucketStatsInit(fileDescriptor, blockCounter));
+			CALL_HT(SHT_BucketStatsInit(fileDescriptor, blockCounter));
 		}
 
 		BF_Block_Destroy(&newBucket);
@@ -426,9 +426,12 @@ HT_ErrorCode SHT_CloseSecondaryIndex(int indexDesc) {
 	return HT_OK;
 }
  
-HT_ErrorCode SHT_SecondaryInsertEntry (int indexDesc,SecondaryRecord record  ) {
+HT_ErrorCode SHT_SecondaryInsertEntry (int indexDesc,SecondaryRecord record) {
 	//insert code here
-	
+	if(validateInsertion(indexDesc,record) == HT_ERROR){
+		fprintf(stderr, "Couldnt insert record\n");
+		return HT_ERROR;
+	}
 	unsigned int key = hash_string(record.index_key);	//hash record id
 
 	//!
@@ -522,8 +525,6 @@ HT_ErrorCode SHT_SecondaryUpdateEntry (int indexDesc, UpdateRecordArray *updateA
 	SecondaryRecord* secRecord = malloc(sizeof(SecondaryRecord));
 	
 	//* an kapoia thesi edo einai true simainei oti exei allaxthei.Os timi mpainei to neo tuppleId
-	//TODO yparxei lathos edo
-	//! sos, giati to bucket index allazei
 	bool* confictsArray = malloc(sizeof(bool)* maxNumberOfRecordsInPrimary);
 
 	// iterate through records in the secondrary indexes and update these records which changed position due to split
