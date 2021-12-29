@@ -56,7 +56,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 
 				CALL_HT(SHT_BlockHeaderUpdate(nextBlock,i,1));
 
-				// CALL_HT(SHT_BucketStatsUpdate(indexDesc, blockIndex));
+				CALL_HT(SHT_BucketStatsUpdate(indexDesc, blockIndex));
 
 				CALL_BF(BF_UnpinBlock(nextBlock));
 				BF_Block_Destroy(&nextBlock);
@@ -115,7 +115,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 		memcpy(c+1,&blockCounter,sizeof(int));
 
 		//call SHT_BucketStatsInit because new D-block created
-		// CALL_HT(SHT_BucketStatsInit(openSHTFiles[indexDesc]->fd, blockCounter));
+		CALL_HT(SHT_BucketStatsInit(openSHTFiles[indexDesc]->fd, blockCounter));
 		
 		BF_Block_SetDirty(nextBlock);
 		CALL_BF(BF_UnpinBlock(nextBlock));
@@ -126,7 +126,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 
 		//New record inserted, so update the position flag
 		CALL_HT(SHT_BlockHeaderUpdate(newBlock,0,1));
-		// CALL_HT(SHT_BucketStatsUpdate(indexDesc, blockCounter));
+		CALL_HT(SHT_BucketStatsUpdate(indexDesc, blockCounter));
 
 		CALL_BF(BF_UnpinBlock(newBlock));
 		BF_Block_Destroy(&newBlock);
@@ -159,7 +159,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 	
 	CALL_BF(BF_GetBlockCounter(openSHTFiles[indexDesc]->fd,&newBucketPosition));
 	newBucketPosition--;
-	// CALL_HT(SHT_BucketStatsInit(indexDesc,newBucketPosition));	//prosthese to bucket se block typou M gia ta stats
+	CALL_HT(SHT_BucketStatsInit(openSHTFiles[indexDesc]->fd,newBucketPosition));	//prosthese to bucket se block typou M gia ta stats
 
 
 	//Unpin block since its data is changed
@@ -321,7 +321,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 			BF_Block_Destroy(&old_bucket);
 			
 
-			// CALL_HT(SHT_BucketStatsUpdate(indexDesc,index_to_bucket));	//gia na enimerothoun ta stats, afoy 'bgike' mia eggrafi
+			CALL_HT(SHT_BucketStatsUpdate(indexDesc,index_to_bucket));	//gia na enimerothoun ta stats, afoy 'bgike' mia eggrafi
 			CALL_HT(SHT_SecondaryInsertEntry(indexDesc,*old_records));
 
 		}

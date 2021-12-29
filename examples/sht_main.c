@@ -129,6 +129,10 @@ int main() {
   printf("\n\nRUN PrintSecondary\n");
   CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc, NULL));
 
-
+  printf("RUN Hashstatistics\n");
+  CALL_OR_DIE(HashStatistics(PRIMARY_FILE_NAME));
+  
+  printf("\n\nRUN SHT_hash statistics\n");
+  CALL_OR_DIE(SHT_HashStatistics(SECONDARY_FILE_NAME));
 
 }

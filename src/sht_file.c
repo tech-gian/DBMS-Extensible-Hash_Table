@@ -168,7 +168,7 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
 			BF_Block_SetDirty(newBucket);
 			CALL_BF(BF_UnpinBlock(newBucket));
 
-			// CALL_HT(SHT_BucketStatsInit(fileDescriptor, blockCounter));
+			CALL_HT(SHT_BucketStatsInit(fileDescriptor, blockCounter));
 		}
 
 		BF_Block_Destroy(&newBucket);
