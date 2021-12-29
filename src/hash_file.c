@@ -241,7 +241,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record,int* tupleId,UpdateReco
 	}
 
 	//find in which block, new record will be inserted
-	int block_index = find_hash_table_block(openFiles[indexDesc]->fd ,key);
+	int block_index = find_hash_table_block(indexDesc ,key);
 
 	BF_Block* block;
 	BF_Block_Init(&block);
@@ -276,7 +276,7 @@ HT_ErrorCode HT_InsertEntry(int indexDesc, Record record,int* tupleId,UpdateReco
 																		// re-insert record
 		}
 		else{	//aextend hash table and try to re-insert the record
-			extend_hash_table(openFiles[indexDesc]->fd);
+			extend_hash_table(indexDesc);
 			return HT_InsertEntry(indexDesc,record, tupleId,updateArray);
 		}
 	}
@@ -291,7 +291,7 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
 	}
 
 	int numberBlocks;
-	CALL_BF(BF_GetBlockCounter(indexDesc, &numberBlocks));
+	CALL_BF(BF_GetBlockCounter(openFiles[indexDesc]->fd, &numberBlocks));
 
 	// Just to see how many bytes of ευρετήριο we have
 	int numberOfFlags = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
@@ -302,7 +302,7 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
 		for (int i=0 ; i<numberBlocks ; ++i) {
 			BF_Block* block;
 			BF_Block_Init(&block);
-			CALL_BF(BF_GetBlock(indexDesc, i, block));
+			CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd, i, block));
 			char* data = BF_Block_GetData(block);
 			char type;
 			memcpy(&type, data, sizeof(char));
@@ -345,7 +345,7 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
 
 	// Else we print the Records that have the same id with the given one
 
-	int globalDepth = get_global_depth(indexDesc);
+	int globalDepth = get_global_depth(openFiles[indexDesc]->fd);
 	unsigned int key = hash_id(*id);
 	key = key >> (sizeof(int)*8 - globalDepth);
 	if (globalDepth == 0) {
@@ -361,7 +361,7 @@ HT_ErrorCode HT_PrintAllEntries(int indexDesc, int *id) {
 
 	// Checking about overflowBlocks (in README we explain why they exist)
 	do {
-		CALL_BF(BF_GetBlock(indexDesc, dataBlockPointer, block));
+		CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd, dataBlockPointer, block));
 		char* data = BF_Block_GetData(block);
 		memcpy(&overflowBlock, data+1, sizeof(int));
 
@@ -407,7 +407,7 @@ HT_ErrorCode HashStatistics(char* filename) {
 
 	// Printing the number of total blocks
 	int numberBlocks;
-	CALL_BF(BF_GetBlockCounter(indexDesc, &numberBlocks));
+	CALL_BF(BF_GetBlockCounter(openFiles[indexDesc]->fd, &numberBlocks));
 	printf("The file: %s has %d blocks\n", filename, numberBlocks);	
 
 	int numberOfStructs;
@@ -420,7 +420,7 @@ HT_ErrorCode HashStatistics(char* filename) {
 
 	// For each MBlock of the file
 	while (true) {
-		CALL_BF(BF_GetBlock(indexDesc, nextMBlock, mblock));
+		CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd, nextMBlock, mblock));
         data = BF_Block_GetData(mblock);
 
 		int numberOfInts = nextMBlock == 0 ? 3 : 2;
