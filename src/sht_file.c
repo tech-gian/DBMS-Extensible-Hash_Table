@@ -63,8 +63,8 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
     // Check if file is already open
     int primaryFD = 0, closePrimaryHT = 1;
     int destIndexPrimary = -1;
-	for (int i = 0; i < openFilesCount; ++i) {
-		if (!strcmp(openFiles[i]->name, fileName)) {
+	for (int i = 0; i < MAX_OPEN_FILES; ++i) {
+		if (openFiles[i] != NULL && !strcmp(openFiles[i]->name, fileName)) {
             destIndexPrimary = i;
 			primaryFD = openFiles[i]->fd;
             closePrimaryHT = 0;
@@ -84,8 +84,8 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
 	}
 
 	// Check if SHT file is already open
-	for (int i=0 ; i<openSHTFilesCount ; ++i) {
-		if (!strcmp(openSHTFiles[i]->name, sfileName)) {
+	for (int i = 0; i < MAX_OPEN_FILES; ++i) {
+		if (openSHTFiles[i] != NULL && !strcmp(openSHTFiles[i]->name, sfileName)) {
 			return HT_ERROR;
 		}
 	}
@@ -243,12 +243,12 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
         return HT_ERROR;
     }
 
-	// openSHTFiles[destIndexSecondary] = currentFile;
+	openSHTFiles[destIndexSecondary] = currentFile;
 
-	// strcpy(openSHTFiles[destIndexSecondary]->name, sfileName);
-	// openSHTFiles[destIndexSecondary]->fd = fileDescriptor;
-    // currentFile->primaryName = fileName;
-	// ++openSHTFilesCount;
+	strcpy(openSHTFiles[destIndexSecondary]->name, sfileName);
+	openSHTFiles[destIndexSecondary]->fd = fileDescriptor;
+    currentFile->primaryName = fileName;
+	++openSHTFilesCount;
 
 
     int primaryTotalBlocks = 0;
@@ -314,10 +314,10 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
 
     // Close the new file
     CALL_BF(BF_CloseFile(fileDescriptor));
-	// free(openSHTFiles[destIndexSecondary]->name);
-	// free(openSHTFiles[destIndexSecondary]);
-    // openSHTFiles[destIndexSecondary] = NULL;
-	// --openSHTFilesCount;
+	free(openSHTFiles[destIndexSecondary]->name);
+	free(openSHTFiles[destIndexSecondary]);
+    openSHTFiles[destIndexSecondary] = NULL;
+	--openSHTFilesCount;
 
 	BF_Block_Destroy(&currentHashBlock);
     if(closePrimaryHT)
