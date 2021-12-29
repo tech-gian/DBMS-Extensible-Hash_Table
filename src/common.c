@@ -211,7 +211,7 @@ HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* t
 	//do..while in case overflow block exists, as i explain in README
 	do{		
 		i=0;
-		BF_GetBlock(indexDesc,blockIndex,nextBlock);
+		BF_GetBlock(openFiles[indexDesc]->fd,blockIndex,nextBlock);
 		char* c = BF_Block_GetData(nextBlock);
 
 		for (i=0;i<total_number_of_records;i++) {
@@ -269,16 +269,16 @@ HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* t
 		BF_Block* newBlock;
 		BF_Block_Init(&newBlock);
 
-		CALL_BF(BF_GetBlock(indexDesc,blockIndex,nextBlock));
+		CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd,blockIndex,nextBlock));
 		char* c = BF_Block_GetData(nextBlock);
 		int local_depth;
 		memcpy(&local_depth,c+1+sizeof(int),sizeof(int));
 
 		//Allocate the new D-block
-		CALL_BF(BF_AllocateBlock(indexDesc,newBlock));
+		CALL_BF(BF_AllocateBlock(openFiles[indexDesc]->fd,newBlock));
 		CALL_HT(BlockHeaderInit(newBlock,'D'));
 		int blockCounter;
-		CALL_BF(BF_GetBlockCounter(indexDesc,&blockCounter));
+		CALL_BF(BF_GetBlockCounter(openFiles[indexDesc]->fd,&blockCounter));
 		blockCounter--;
 
 		//connect the new D-block with the previous one
@@ -438,7 +438,7 @@ HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* reco
 	CALL_BF(BF_UnpinBlock(old_bucket));
 	BF_Block_Destroy(&old_bucket);
 
-	CALL_BF(BF_GetBlock(indexDesc,newBucketPosition,newBucket));
+	CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd,newBucketPosition,newBucket));
 
 	// update local depth of the new bucket too
 	char* newBucketData = BF_Block_GetData(newBucket);
@@ -540,11 +540,11 @@ HT_ErrorCode extend_hash_table(int indexDesc){
 	int global_depth;
 	int newIndexes;
 
-	CALL_BF(BF_GetBlock(indexDesc,1,block));
+	CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd,1,block));
 	c= BF_Block_GetData(block);
 
 
-	global_depth = get_global_depth(indexDesc);
+	global_depth = get_global_depth(openFiles[indexDesc]->fd);
 	if(global_depth == -1){
 		return HT_ERROR;
 	}
@@ -558,7 +558,7 @@ HT_ErrorCode extend_hash_table(int indexDesc){
 	int arrayCounter = 0;
 	do{	
 
-		CALL_BF(BF_GetBlock(indexDesc,newHT,block));
+		CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd,newHT,block));
 		c = BF_Block_GetData(block);
 		memcpy(&currentNumberOfBuckets, c+1+2*sizeof(int),sizeof(int));
 		
@@ -587,7 +587,7 @@ HT_ErrorCode extend_hash_table(int indexDesc){
 	//antigrafo apo ton pinaka piso sto hash table, apla epeidi egine extend 2 diadoxikes theseis tha deixnoyn ston idio bucket 
 	do{
 		
-		CALL_BF(BF_GetBlock(indexDesc,newHT,block));
+		CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd,newHT,block));
 		c = BF_Block_GetData(block);
 		memcpy(c+1+sizeof(int),&global_depth,sizeof(int));
 		
@@ -614,8 +614,8 @@ HT_ErrorCode extend_hash_table(int indexDesc){
 			BF_Block* newHashBlock;
 			
 			BF_Block_Init(&newHashBlock);
-			CALL_BF(BF_AllocateBlock(indexDesc,newHashBlock));
-			CALL_BF(BF_GetBlockCounter(indexDesc,&blockCounter));
+			CALL_BF(BF_AllocateBlock(openFiles[indexDesc]->fd,newHashBlock));
+			CALL_BF(BF_GetBlockCounter(openFiles[indexDesc]->fd,&blockCounter));
 			
 			blockCounter--;
 			CALL_HT(BlockHeaderInit(newHashBlock,'H'));

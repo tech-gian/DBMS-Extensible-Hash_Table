@@ -50,6 +50,7 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
 
     // 0 for surname, 1 for city
     int attrCategory;
+	
 
     if(strncmp(attrName, "surname", attrLength) == 0)
         attrCategory = 0;
@@ -261,7 +262,8 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
     for (int i = 0; i < primaryTotalBlocks ; ++i) {
         BF_Block* block;
         BF_Block_Init(&block);
-        CALL_BF(BF_GetBlock(destIndexPrimary, i, block));
+
+        CALL_BF(BF_GetBlock(openFiles[destIndexPrimary]->fd, i, block));
         char* data = BF_Block_GetData(block);
         char type;
         memcpy(&type, data, sizeof(char));
@@ -282,7 +284,6 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
             char flagValue;
 
             memcpy(&flagValue, data+1+2*sizeof(int) + j/8, sizeof(char));
-
             flagValue = flagValue << (j%8);
             flagValue = flagValue >> 7;
             if (flagValue == 0) {
