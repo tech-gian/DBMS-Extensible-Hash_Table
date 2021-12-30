@@ -69,18 +69,62 @@ int main() {
 	BF_Init(LRU);
   
 	CALL_OR_DIE(HT_Init());
+    CALL_OR_DIE(SHT_Init());
+
+    int a;
+	CALL_OR_DIE(HT_CreateIndex("a", GLOBAL_DEPT));
+	CALL_OR_DIE(HT_OpenIndex("a", &a)); 
+  
+    int A;
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("A","surname",20,GLOBAL_DEPT,"a"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("A", &A));
+
+    int b;
+	CALL_OR_DIE(HT_CreateIndex("b", GLOBAL_DEPT));
+	CALL_OR_DIE(HT_OpenIndex("b", &b)); 
+  
+    int B;
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("B","city",123,4,"b"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("B", &B));
+
+    int c;
+	CALL_OR_DIE(HT_CreateIndex("c", GLOBAL_DEPT));
+	CALL_OR_DIE(HT_OpenIndex("c", &c)); 
+  
+    int C;
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("C","surname",20,GLOBAL_DEPT,"c"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("C", &C));
+
+    CALL_OR_DIE(SHT_CloseSecondaryIndex(B));
+    CALL_OR_DIE(HT_CloseFile(b));
+
+    int d;
+	CALL_OR_DIE(HT_CreateIndex("d", GLOBAL_DEPT));
+	CALL_OR_DIE(HT_OpenIndex("d", &d));
+
+    CALL_OR_DIE(SHT_CloseSecondaryIndex(A));
+    CALL_OR_DIE(HT_CloseFile(a));
+  
+    int D;
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("D","city",20,GLOBAL_DEPT,"d"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("D", &D));
+
+    CALL_OR_DIE(SHT_CloseSecondaryIndex(D));
+    CALL_OR_DIE(HT_CloseFile(d));
+    CALL_OR_DIE(SHT_CloseSecondaryIndex(C));
+    CALL_OR_DIE(HT_CloseFile(c));
 
 	int indexDesc;
 	CALL_OR_DIE(HT_CreateIndex(PRIMARY_FILE_NAME, GLOBAL_DEPT));
 	CALL_OR_DIE(HT_OpenIndex(PRIMARY_FILE_NAME, &indexDesc)); 
   
-  int secIndexDesc;
-  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
-  CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
+    int secIndexDesc;
+    CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
 
 
 	Record record;
-  SecondaryRecord secRecord;
+    SecondaryRecord secRecord;
 	srand(12569874);
 	int r;
 
@@ -95,44 +139,47 @@ int main() {
 
 	printf("Insert Entries\n");
 	for (int id = 0; id < RECORDS_NUM; ++id) {
-    for (int i=0;i<8;i++){
-		updateArray[i].oldTupleId = -1;
-		updateArray[i].newTupleId = -1;
-	}
-		// create a record
-		record.id = id;
-		r = rand() % 12;
-		memcpy(record.name, names[r], strlen(names[r]) + 1);
-		r = rand() % 12;
-		memcpy(record.surname, surnames[r], strlen(surnames[r]) + 1);
-		r = rand() % 10;
-		memcpy(record.city, cities[r], strlen(cities[r]) + 1);
-		CALL_OR_DIE(HT_InsertEntry(indexDesc, record,&tuppleId,updateArray));
-    strcpy(secRecord.index_key,record.city);
-    secRecord.tupleId = tuppleId;
-    
-    if(updateArray[0].newTupleId != -1){
-      printf("eeee\n");
-      SHT_SecondaryUpdateEntry(secIndexDesc,updateArray);
-    }
-    CALL_OR_DIE(SHT_SecondaryInsertEntry(secIndexDesc,secRecord));
+        for (int i=0;i<8;i++){
+            updateArray[i].oldTupleId = -1;
+            updateArray[i].newTupleId = -1;
+        }
+        // create a record
+        record.id = id;
+        r = rand() % 12;
+        memcpy(record.name, names[r], strlen(names[r]) + 1);
+        r = rand() % 12;
+        memcpy(record.surname, surnames[r], strlen(surnames[r]) + 1);
+        r = rand() % 10;
+        memcpy(record.city, cities[r], strlen(cities[r]) + 1);
+        CALL_OR_DIE(HT_InsertEntry(indexDesc, record,&tuppleId,updateArray));
+        strcpy(secRecord.index_key,record.city);
+        secRecord.tupleId = tuppleId;
+        
+        if(updateArray[0].newTupleId != -1){
+            printf("eeee\n");
+            SHT_SecondaryUpdateEntry(secIndexDesc,updateArray);
+        }
+        CALL_OR_DIE(SHT_SecondaryInsertEntry(secIndexDesc,secRecord));
 
 	}
     // int secIndexDesc;
-  // CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
-  // CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
+    // CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
+    // CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
 
 	printf("RUN PrintAllEntries\n");
 	int id = rand() % RECORDS_NUM;
 	CALL_OR_DIE(HT_PrintAllEntries(indexDesc, NULL));
 
-  printf("\n\nRUN PrintSecondary\n");
-  CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc, NULL));
+    printf("\n\nRUN PrintSecondary\n");
+    CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc, NULL));
 
-  printf("RUN Hashstatistics\n");
-  CALL_OR_DIE(HashStatistics(PRIMARY_FILE_NAME));
-  
-  printf("\n\nRUN SHT_hash statistics\n");
-  CALL_OR_DIE(SHT_HashStatistics(SECONDARY_FILE_NAME));
+    printf("RUN Hashstatistics\n");
+    CALL_OR_DIE(HashStatistics(PRIMARY_FILE_NAME));
+    
+    printf("\n\nRUN SHT_hash statistics\n");
+    CALL_OR_DIE(SHT_HashStatistics(SECONDARY_FILE_NAME));
 
+    CALL_OR_DIE(SHT_CloseSecondaryIndex(secIndexDesc));
+    CALL_OR_DIE(HT_CloseFile(indexDesc));
+    BF_Close();
 }

@@ -204,7 +204,7 @@ HT_ErrorCode HT_OpenIndex(const char *fileName, int *indexDesc) {
 	strcpy(openFiles[destIndex]->name, fileName);
 	openFiles[destIndex]->fd = fileDescriptor;
 	++openFilesCount;
-	*indexDesc = fileDescriptor;
+	*indexDesc = destIndex;
 	
 	return HT_OK;
 }
