@@ -11,6 +11,7 @@
 #define GLOBAL_DEPT 1 // you can change it if you want
 #define PRIMARY_FILE_NAME "data.db"
 #define SECONDARY_FILE_NAME "Sec_data.db"
+#define SECONDARY_FILE_NAME1 "Sec_data1.db"
 
 const char* names[] = {
   "Yannis",
@@ -75,7 +76,7 @@ int main() {
 	CALL_OR_DIE(HT_OpenIndex(PRIMARY_FILE_NAME, &indexDesc)); 
   
   int secIndexDesc;
-  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
+  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME, "city", 20, GLOBAL_DEPT, PRIMARY_FILE_NAME));
   CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
 
 
@@ -112,7 +113,6 @@ int main() {
     secRecord.tupleId = tuppleId;
     
     if(updateArray[0].newTupleId != -1){
-      printf("eeee\n");
       SHT_SecondaryUpdateEntry(secIndexDesc,updateArray);
     }
     CALL_OR_DIE(SHT_SecondaryInsertEntry(secIndexDesc,secRecord));
@@ -122,8 +122,8 @@ int main() {
   // CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
   // CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
 
-	printf("RUN PrintAllEntries\n");
-	int id = rand() % RECORDS_NUM;
+	// printf("RUN PrintAllEntries\n");
+	// int id = rand() % RECORDS_NUM;
 	CALL_OR_DIE(HT_PrintAllEntries(indexDesc, NULL));
 
   printf("\n\nRUN PrintSecondary\n");
@@ -135,4 +135,26 @@ int main() {
   printf("\n\nRUN SHT_hash statistics\n");
   CALL_OR_DIE(SHT_HashStatistics(SECONDARY_FILE_NAME));
 
+  printf("\n\nRUN SHT_InnerJoin\n");
+
+  int secIndexDesc1;
+  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME1, "city", 20, GLOBAL_DEPT, PRIMARY_FILE_NAME));
+  CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME1, &secIndexDesc1));
+
+  printf("\n\nRUN PrintSecondary\n");
+  CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc1, NULL));
+
+  CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, "Miami"));
+
+  CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, NULL));
+
+
+  // Closing open files
+  CALL_OR_DIE(HT_CloseFile(indexDesc));
+  // TODO: In this commented file there is pinned block
+  // CALL_OR_DIE(SHT_CloseSecondaryIndex(secIndexDesc));
+  CALL_OR_DIE(SHT_CloseSecondaryIndex(secIndexDesc1));
+
+  // Free memory
+  free(updateArray);
 }

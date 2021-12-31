@@ -1,6 +1,6 @@
 sht: clean
-	@echo " Compile ht_main ...";
-	gcc -g -I ./include/ -L ./lib/ -Wl,-rpath,./lib/ ./examples/sht_main.c ./src/hash_file.c ./src/sht_file.c ./src/common.c ./src/blockFunctions.c ./src/sht_blockFunctions.c ./src/shtInsertFunctions.c -lbf -o ./build/runner -O2
+	@echo " Compile sht_main ...";
+	gcc -g -Werror -I ./include/ -L ./lib/ -Wl,-rpath,./lib/ ./examples/sht_main.c ./src/hash_file.c ./src/sht_file.c ./src/common.c ./src/blockFunctions.c ./src/sht_blockFunctions.c ./src/shtInsertFunctions.c -lbf -o ./build/runner -O2
 
 ht: clean
 	@echo " Compile ht_main ...";
@@ -15,7 +15,7 @@ myMain: clean
 	gcc -g -Werror  -I ./include/ -L ./lib/ -Wl,-rpath,./lib/ ./examples/my_main.c ./src/hash_file.c ./src/common.c ./src/blockFunctions.c -lbf -o ./build/runner -O2
 
 clean:
-	rm -rf build/runner data.db data1.db Sec_data.db
+	rm -rf build/runner data.db data1.db Sec_data.db Sec_data1.db
 
 run: ht
 	./build/runner

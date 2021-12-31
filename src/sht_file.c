@@ -271,7 +271,7 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
         // We don't care about 'H', 'M' or 'm' blocks
         if (type == 'H' || type == 'M' || type == 'm') {
             CALL_BF(BF_UnpinBlock(block));
-            BF_Block_Destroy(&block);
+			BF_Block_Destroy(&block);
             continue;
         }
 
@@ -712,7 +712,7 @@ HT_ErrorCode SHT_PrintAllEntries(int sindexDesc, char *index_key ) {
 
 
 
-HT_ErrorCode SHT_HashStatistics(char *filename ) {
+HT_ErrorCode SHT_HashStatistics(char *filename) {
 	int sindexDesc;
 	// We found the indexDesc of the file
 	for (int i=0 ; i<openSHTFilesCount ; ++i) {
@@ -786,99 +786,124 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 	int numberOfBytesFlags = numberOfFlags % (sizeof(char)*8) == 0 ? numberOfFlags / (sizeof(char)*8) : numberOfFlags / (sizeof(char)*8) + 1;
 
 
-
-
-
-	// TODO: Check the logic again
+	// TODO: Add comments
 	if (index_key == NULL) {
-		// Iterate through all different index_keys of one file (choose the one with less blocks)
-		// For each index_key search the hash_key
-		// 		If it exists, go to the block and print the corresponding things
-		// 		If it doesn't exist, move on to the next index_key (it doesn't exist when find_hash_table_block() returns -1)
-
 		int numberOfBlocks;
-		CALL_BF(BF_GetBlockCounter(sindexDesc1, &numberOfBlocks));
+		CALL_BF(BF_GetBlockCounter(openSHTFiles[sindexDesc1]->fd, &numberOfBlocks));
 		BF_Block* block;
 		BF_Block_Init(&block);
 		SecondaryRecord* record = malloc(sizeof(SecondaryRecord));
 		if (record == NULL) {
 			return HT_ERROR;
 		}
-		char prev_index_key[20] = "0";
+
 
 		for (int i=0 ; i<numberOfBlocks ; ++i) {
-			CALL_BF(BF_GetBlock(sindexDesc1, i, block));
+			CALL_BF(BF_GetBlock(openSHTFiles[sindexDesc1]->fd, i, block));
 			char* data = BF_Block_GetData(block);
 
 			char type;
 			memcpy(&type, data, sizeof(char));
 
-			// We don't care about 'H', 'M' or 'm' blocks
+			// We don't care about 'H', 'M' or 's' blocks
 			if (type == 'H' || type == 'M' || type == 's') {
 				CALL_BF(BF_UnpinBlock(block));
-				BF_Block_Destroy(&block);
 				continue;
 			}
 
+			
+			// Creating an array for all possible index_keys
+			char index_keys[20][20];
+			for (int j=0 ; j<20 ; ++j) {
+				strcpy(index_keys[j], "");
+			}
+			
 			for (int j=0 ; j<numberOfFlags ; ++j) {
 				unsigned char flagValue;
-				memcpy(&flagValue, data+1+2*sizeof(int)+i/8, sizeof(char));
-				bool flag = false;
-
-				flagValue = flagValue << i;
+				memcpy(&flagValue, data+1+2*sizeof(int)+j/8, sizeof(char));
+				
+				flagValue = flagValue << j%8;
 				flagValue = flagValue >> (sizeof(char)*8 - 1);
 
 				if (flagValue == 1) {
-					memcpy(record, data+1+2*sizeof(int)+numberOfBytesFlags + i*sizeof(SecondaryRecord), sizeof(SecondaryRecord));
+					memcpy(record, data+1+2*sizeof(int)+numberOfBytesFlags + j*sizeof(SecondaryRecord), sizeof(SecondaryRecord));
 
-					if (strcmp(record->index_key, prev_index_key) != 0) {
-						strcpy(prev_index_key, record->index_key);
+					int pos = -1;
+					// Looping through the array for same index_key
+					for (int t=0 ; t<20 ; ++t) {
+						if (strcmp(index_keys[t], "") == 0) {
+							strcpy(index_keys[t], record->index_key);
+							pos = t;
+							break;
+						}
+						if (strcmp(index_keys[t], record->index_key) == 0) {
+							pos = -1;
+							break;
+						}
+					}
 
-						int globalDepth = get_global_depth(sindexDesc2);
-						unsigned int key = hash_string(prev_index_key);
+					if (pos != -1) {
+						SecondaryRecord* record1 = malloc(sizeof(SecondaryRecord));
+						if (record1 == NULL) {
+							return HT_ERROR;
+						}
+
+						printf("%s\t", index_keys[pos]);
+						printf("File1: ");
+						for (int k=0 ; k<numberOfFlags ; ++k) {
+							unsigned char flagValue1;
+							memcpy(&flagValue1, data+1+2*sizeof(int)+k/8, sizeof(char));
+
+							flagValue1 = flagValue1 << k%8;
+							flagValue1 = flagValue1 >> (sizeof(char)*8 - 1);
+
+							if (flagValue1 == 1) {
+								memcpy(record1, data+1+2*sizeof(int)+numberOfBytesFlags + k*sizeof(SecondaryRecord), sizeof(SecondaryRecord));
+
+								if (strcmp(record1->index_key, index_keys[pos]) == 0) {
+									printf("tupleId: %d ", record1->tupleId);
+								}
+							}
+						}
+						printf("\t");
+
+						// Second file
+						printf("File2: ");
+						int globalDepth = get_global_depth(openSHTFiles[sindexDesc2]->fd);
+						unsigned int key = hash_string(index_keys[pos]);
 						key = key >> (sizeof(int)*8 - globalDepth);
 						if (globalDepth == 0) {
 							key = 0;
 						}
-						int dataBlockPointer = sht_find_hash_table_block(sindexDesc1, key);
+						int dataBlockPointer = sht_find_hash_table_block(sindexDesc2, key);
 
-						if (dataBlockPointer == -1) {
-							flag = false;
-						}
-						else {
-							BF_Block* block2;
-							BF_Block_Init(&block2);
+						BF_Block* block2;
+						BF_Block_Init(&block2);
+						CALL_BF(BF_GetBlock(openSHTFiles[sindexDesc2]->fd, dataBlockPointer, block2));
 
-							BF_GetBlock(sindexDesc2, dataBlockPointer, block2);
-							char* data2 = BF_Block_GetData(block2);
-							SecondaryRecord* record2 = malloc(sizeof(SecondaryRecord));
-							if (record == NULL) {
-								return HT_ERROR;
-							}
+						char* data2 = BF_Block_GetData(block2);
+						for (int k=0 ; k<numberOfFlags ; ++k) {
+							unsigned char flagValue2;
+							memcpy(&flagValue2, data2+1+2*sizeof(int)+k/8, sizeof(char));
 
-							for (int k=0 ; k<numberOfFlags ; ++k) {
-								unsigned char flagValue2;
-								memcpy(&flagValue2, data+1+2*sizeof(int)+i/8, sizeof(char));
-								flagValue2 = flagValue2 << i;
-								flagValue2 = flagValue2 >> (sizeof(char)*8 - 1);
+							flagValue2 = flagValue2 << k%8;
+							flagValue2 = flagValue2 >> (sizeof(char)*8 - 1);
 
-								if (flagValue2 == 1) {
-									memcpy(record2, data+1+2*sizeof(int)+numberOfBytesFlags + i*sizeof(SecondaryRecord), sizeof(SecondaryRecord));
+							if (flagValue2 == 1) {
+								memcpy(record1, data2+1+2*sizeof(int)+numberOfBytesFlags + k*sizeof(SecondaryRecord), sizeof(SecondaryRecord));
 
-									if (strcmp(record2->index_key, prev_index_key) == 0) {
-										flag = true;
-										printf("tupleId: %d ", record->tupleId);
-									}
+								if (strcmp(record1->index_key, index_keys[pos]) == 0) {
+									printf("tupleId: %d ", record1->tupleId);
 								}
 							}
-							CALL_BF(BF_UnpinBlock(block2));
-							BF_Block_Destroy(&block2);
-
 						}
+						printf("\n");
+
+						free(record1);
+						CALL_BF(BF_UnpinBlock(block2));
+						BF_Block_Destroy(&block2);
 					}
-					if (strcmp(record->index_key, prev_index_key) == 0 && flag) {
-						printf("tupleId: %d ", record->tupleId);
-					}
+
 				}
 			}
 
@@ -886,6 +911,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 		}
 
 		BF_Block_Destroy(&block);
+		free(record);
 		return HT_OK;
 	}
 
@@ -894,7 +920,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 
 	// Else we print for specific index_key
 
-	int globalDepth1 = get_global_depth(sindexDesc1);
+	int globalDepth1 = get_global_depth(openSHTFiles[sindexDesc1]->fd);
 	unsigned int key1 = hash_string(index_key);
 	key1 = key1 >> (sizeof(int)*8 - globalDepth1);
 	if (globalDepth1 == 0) {
@@ -902,7 +928,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 	}
 	int dataBlockPointer1 = sht_find_hash_table_block(sindexDesc1, key1);
 
-	int globalDepth2 = get_global_depth(sindexDesc2);
+	int globalDepth2 = get_global_depth(openSHTFiles[sindexDesc2]->fd);
 	unsigned int key2 = hash_string(index_key);
 	key2 = key2 >> (sizeof(int)*8 - globalDepth2);
 	if (globalDepth2 == 0) {
@@ -920,14 +946,14 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 
 	printf("Inner_Join with index_key: %s\n", index_key);
 
-	CALL_BF(BF_GetBlock(sindexDesc1, dataBlockPointer1, block));
+	CALL_BF(BF_GetBlock(openSHTFiles[sindexDesc1]->fd, dataBlockPointer1, block));
 	char* data = BF_Block_GetData(block);
 	printf("File1: %s\n", openSHTFiles[sindexDesc1]->name);
 	for (int i=0 ; i<numberOfFlags ; ++i) {
 		unsigned char flagValue;
 		memcpy(&flagValue, data+1+2*sizeof(int)+i/8, sizeof(char));
 
-		flagValue = flagValue << i;
+		flagValue = flagValue << i%8;
 		flagValue = flagValue >> (sizeof(char)*8 - 1);
 
 		if (flagValue == 1) {
@@ -941,14 +967,14 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 	printf("\n");
 	CALL_BF(BF_UnpinBlock(block));
 
-	CALL_BF(BF_GetBlock(sindexDesc2, dataBlockPointer2, block));
+	CALL_BF(BF_GetBlock(openSHTFiles[sindexDesc2]->fd, dataBlockPointer2, block));
 	data = BF_Block_GetData(block);
 	printf("File2: %s\n", openSHTFiles[sindexDesc2]->name);
 	for (int i=0 ; i<numberOfFlags ; ++i) {
 		unsigned char flagValue;
 		memcpy(&flagValue, data+1+2*sizeof(int)+i/8, sizeof(char));
 
-		flagValue = flagValue << i;
+		flagValue = flagValue << i%8;
 		flagValue = flagValue >> (sizeof(char)*8 - 1);
 
 		if (flagValue == 1) {
@@ -962,6 +988,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 	printf("\n");
 	CALL_BF(BF_UnpinBlock(block));
 	BF_Block_Destroy(&block);
+	free(record);
 
 	return HT_OK;
 }
