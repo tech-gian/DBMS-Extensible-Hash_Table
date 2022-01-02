@@ -6,11 +6,14 @@
 #include "hash_file.h"
 #include "sht_file.h"
 
-//! exei elegxthei kai douleuei gia 1000 eggrafes me global depth 1
-#define RECORDS_NUM 14 // you can change it if you want 
-#define GLOBAL_DEPT 1 // you can change it if you want
+//! exei elegxthei kai douleuei gia 1000 eggrafes me global depth 1-10
+#define RECORDS_NUM 10000 // you can change it if you want 
+#define GLOBAL_DEPT 10 // you can change it if you want
 #define PRIMARY_FILE_NAME "data.db"
 #define SECONDARY_FILE_NAME "Sec_data.db"
+#define SECONDARY_FILE_NAME1 "Sec_data1.db"
+
+#define PRIMARY_FILE_NAME1 "data1.db"
 #define SECONDARY_FILE_NAME1 "Sec_data1.db"
 
 const char* names[] = {
@@ -128,12 +131,25 @@ int main() {
 
   printf("\n\nRUN PrintSecondary\n");
   CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc, NULL));
+  free(updateArray);
 
   printf("RUN Hashstatistics\n");
   CALL_OR_DIE(HashStatistics(PRIMARY_FILE_NAME));
   
   printf("\n\nRUN SHT_hash statistics\n");
   CALL_OR_DIE(SHT_HashStatistics(SECONDARY_FILE_NAME));
+  // int indexDesc1;
+
+  // CALL_OR_DIE(HT_CreateIndex(PRIMARY_FILE_NAME1, GLOBAL_DEPT));
+	// CALL_OR_DIE(HT_OpenIndex(PRIMARY_FILE_NAME1, &indexDesc1));
+  // HashStatistics(PRIMARY_FILE_NAME1);
+
+  // int secIndexDesc1;
+  // CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME1, "city", 20, GLOBAL_DEPT, PRIMARY_FILE_NAME));
+  // CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME1, &secIndexDesc1));
+
+  // CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, NULL));
+  
 
   printf("\n\nRUN SHT_InnerJoin\n");
 

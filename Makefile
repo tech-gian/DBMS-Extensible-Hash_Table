@@ -24,4 +24,4 @@ runsht: sht
 	./build/runner
 
 valgrind_sht: sht clean
-	valgrind  --leak-check=full --track-origins=yes ./build/runner
+	valgrind  --leak-check=full --show-leak-kinds=all --track-origins=yes ./build/runner

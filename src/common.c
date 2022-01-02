@@ -101,6 +101,7 @@ int find_hash_table_block(int indexDesc,unsigned int key){
 	return -1;	//se periptosi lathous pou den yparxei tetoio key
 }
 
+// like the above find hash table, but for secondary indexes
 int sht_find_hash_table_block(int indexDesc,unsigned int key){
 
 	int currentNumberOfBuckets;	// deixnei poios einai o arithmos twn buckets sto yparxon hash table block

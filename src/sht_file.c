@@ -407,6 +407,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
 	*indexDesc = destIndex;
 	
 	BF_Block_Destroy(&block1);
+	free(primaryFileName);
     return HT_OK;
 }
 
@@ -428,7 +429,7 @@ HT_ErrorCode SHT_CloseSecondaryIndex(int indexDesc) {
 }
  
 HT_ErrorCode SHT_SecondaryInsertEntry (int indexDesc,SecondaryRecord record) {
-	//insert code here
+	// insert code here
 	if(validateInsertion(indexDesc,record) == HT_ERROR){
 		fprintf(stderr, "Couldnt insert record\n");
 		return HT_ERROR;
