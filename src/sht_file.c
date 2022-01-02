@@ -407,6 +407,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
 	*indexDesc = destIndex;
 	
 	BF_Block_Destroy(&block1);
+	free(primaryFileName);
     return HT_OK;
 }
 
@@ -428,7 +429,7 @@ HT_ErrorCode SHT_CloseSecondaryIndex(int indexDesc) {
 }
  
 HT_ErrorCode SHT_SecondaryInsertEntry (int indexDesc,SecondaryRecord record) {
-	//insert code here
+	// insert code here
 	if(validateInsertion(indexDesc,record) == HT_ERROR){
 		fprintf(stderr, "Couldnt insert record\n");
 		return HT_ERROR;
@@ -797,7 +798,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 		// 		If it doesn't exist, move on to the next index_key (it doesn't exist when find_hash_table_block() returns -1)
 
 		int numberOfBlocks;
-		CALL_BF(BF_GetBlockCounter(sindexDesc1, &numberOfBlocks));
+		CALL_BF(BF_GetBlockCounter(openSHTFiles[sindexDesc1]->fd, &numberOfBlocks));
 		BF_Block* block;
 		BF_Block_Init(&block);
 		SecondaryRecord* record = malloc(sizeof(SecondaryRecord));
@@ -807,16 +808,15 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 		char prev_index_key[20] = "0";
 
 		for (int i=0 ; i<numberOfBlocks ; ++i) {
-			CALL_BF(BF_GetBlock(sindexDesc1, i, block));
+			CALL_BF(BF_GetBlock(openSHTFiles[sindexDesc1]->fd, i, block));
 			char* data = BF_Block_GetData(block);
 
 			char type;
 			memcpy(&type, data, sizeof(char));
 
-			// We don't care about 'H', 'M' or 'm' blocks
+			// We don't care about 'H', 'M' or 's' blocks
 			if (type == 'H' || type == 'M' || type == 's') {
 				CALL_BF(BF_UnpinBlock(block));
-				BF_Block_Destroy(&block);
 				continue;
 			}
 
@@ -834,7 +834,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 					if (strcmp(record->index_key, prev_index_key) != 0) {
 						strcpy(prev_index_key, record->index_key);
 
-						int globalDepth = get_global_depth(sindexDesc2);
+						int globalDepth = get_global_depth(openSHTFiles[sindexDesc2]->fd);
 						unsigned int key = hash_string(prev_index_key);
 						key = key >> (sizeof(int)*8 - globalDepth);
 						if (globalDepth == 0) {
@@ -849,7 +849,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 							BF_Block* block2;
 							BF_Block_Init(&block2);
 
-							BF_GetBlock(sindexDesc2, dataBlockPointer, block2);
+							BF_GetBlock(openSHTFiles[sindexDesc2]->fd, dataBlockPointer, block2);
 							char* data2 = BF_Block_GetData(block2);
 							SecondaryRecord* record2 = malloc(sizeof(SecondaryRecord));
 							if (record == NULL) {

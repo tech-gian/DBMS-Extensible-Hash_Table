@@ -63,6 +63,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 
 
 				free(rec);
+				free(currentIndexKey);
 				return HT_OK;
 
 			}else{
@@ -136,6 +137,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 		return HT_OK;
 	}
 	BF_Block_Destroy(&nextBlock);
+	free(currentIndexKey);
 	return HT_ERROR;
 }
 
@@ -348,7 +350,7 @@ HT_ErrorCode sht_arrange_buckets(const int indexDesc,int buddies_number,Secondar
 	return HT_ERROR;
 }
 
-
+// extend hash table for secondary indexes
 HT_ErrorCode sht_extend_hash_table(int indexDesc){
 	int maxNumberOfBuckets = (BF_BLOCK_SIZE - 1 - 3*sizeof(int))/sizeof(int); // poios einai o megistos arithmos apo buckets pou xoraei kathe hash table
 	int currentNumberOfBuckets;	// poios einai o arithmos apo buckets pou exei to hash table
@@ -455,7 +457,9 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc){
 }
 
 
-
+// this function is called before every insertion to validate it
+// For example id user tries to insert a record in secondary that does not exist in the primary
+// or if deliberately tries to insert a wrong record
 HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 
 	// openSHTFiles[indexDesc]->name
@@ -485,6 +489,7 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 		}
 	}
 	if(primaryIndexDesc == MAX_OPEN_FILES){
+		
 		fprintf(stderr,"Error: Primary index table is closed\n");
 		return HT_ERROR;
 	}
@@ -497,11 +502,12 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 									maxNumberOfRecordsInPrimary / (sizeof(char)*8) + 1;
 
 
-	BF_Block* primaryBlock;	//!na ginei unpin
+	BF_Block* primaryBlock;	
 	BF_Block_Init(&primaryBlock);
 	BF_GetBlock(openFiles[primaryIndexDesc]->fd,blockInPrimary,primaryBlock);
 	char* primaryBlockData = BF_Block_GetData(primaryBlock);
 	BF_UnpinBlock(primaryBlock);
+	BF_Block_Destroy(&primaryBlock);
 
 	// pairno to flag na do an einai 0. An einai 0 epistrefo HT_ERROR
 	unsigned char flagValue;
@@ -509,9 +515,12 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 
 	flagValue = flagValue << (positionInPrimary - (positionInPrimary/8)*8);
 	flagValue = flagValue >>(sizeof(char)*8-1);
-
+	
+	free(primaryFileName);
+	
 	if (flagValue == 0){
 		fprintf(stderr,"Error: Invalid tupleId. Position in block is invalid\n");
+		BF_Block_Destroy(&secBlock);
 		return HT_ERROR;
 	}else{
 		Record primaryRecord;
@@ -519,17 +528,18 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 		if(attributeKey == 0){
 			if(strcmp(record.index_key,primaryRecord.surname) != 0){
 				fprintf(stderr,"Error: Invalid tupleId. Position in block is invalid\n");
+				BF_Block_Destroy(&secBlock);
 				return HT_ERROR;
 			}
 		}else if(attributeKey == 1){
 			if(strcmp(record.index_key,primaryRecord.city) != 0){
 				fprintf(stderr,"Error: Invalid tupleId. Position in block is invalid\n");
+				BF_Block_Destroy(&secBlock);
 				return HT_ERROR;
 			}
 		}
 
 	}
-	//TODO bazo ton elegxo 3
 
 	// Now i must iterate through secondaryIndexes block, to check if there is a record with the same tupleId
 	// if yes, return HT_ERROR
@@ -563,13 +573,11 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 		memcpy(secRecord,sBlockData+1+2*sizeof(int)+indexesBytesInSec+i*sizeof(SecondaryRecord),sizeof(SecondaryRecord));
 		if(secRecord->tupleId == record.tupleId){
 			fprintf(stderr,"Error: call SHT_SecondaryUpdateEntry and try again\n");
+			BF_Block_Destroy(&secBlock);
 			return HT_ERROR;
 		}
 	}
 	free(secRecord);
-
-
-	//to be continue
-
-
+	BF_Block_Destroy(&secBlock);
+	return HT_OK;
 }
