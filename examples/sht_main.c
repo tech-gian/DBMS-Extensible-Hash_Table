@@ -11,6 +11,7 @@
 #define GLOBAL_DEPT 10 // you can change it if you want
 #define PRIMARY_FILE_NAME "data.db"
 #define SECONDARY_FILE_NAME "Sec_data.db"
+#define SECONDARY_FILE_NAME1 "Sec_data1.db"
 
 #define PRIMARY_FILE_NAME1 "data1.db"
 #define SECONDARY_FILE_NAME1 "Sec_data1.db"
@@ -78,7 +79,7 @@ int main() {
 	CALL_OR_DIE(HT_OpenIndex(PRIMARY_FILE_NAME, &indexDesc)); 
   
   int secIndexDesc;
-  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
+  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME, "city", 20, GLOBAL_DEPT, PRIMARY_FILE_NAME));
   CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
 
 
@@ -124,8 +125,8 @@ int main() {
   // CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
   // CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
 
-	printf("RUN PrintAllEntries\n");
-	int id = rand() % RECORDS_NUM;
+	// printf("RUN PrintAllEntries\n");
+	// int id = rand() % RECORDS_NUM;
 	CALL_OR_DIE(HT_PrintAllEntries(indexDesc, NULL));
 
   printf("\n\nRUN PrintSecondary\n");
@@ -150,4 +151,26 @@ int main() {
   // CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, NULL));
   
 
+  printf("\n\nRUN SHT_InnerJoin\n");
+
+  int secIndexDesc1;
+  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME1, "city", 20, GLOBAL_DEPT, PRIMARY_FILE_NAME));
+  CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME1, &secIndexDesc1));
+
+  printf("\n\nRUN PrintSecondary\n");
+  CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc1, NULL));
+
+  CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, "Miami"));
+
+  CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, NULL));
+
+
+  // Closing open files
+  CALL_OR_DIE(HT_CloseFile(indexDesc));
+  // TODO: In this commented file there is pinned block
+  // CALL_OR_DIE(SHT_CloseSecondaryIndex(secIndexDesc));
+  CALL_OR_DIE(SHT_CloseSecondaryIndex(secIndexDesc1));
+
+  // Free memory
+  free(updateArray);
 }
