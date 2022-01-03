@@ -286,7 +286,7 @@ HT_ErrorCode insert_record(Record* record, int indexDesc, int blockIndex, int* t
 		memcpy(c+1,&blockCounter,sizeof(int));
 
 		//call bucketStatsInit because new D-block created
-		CALL_HT(BucketStatsInit(indexDesc, blockCounter));
+		CALL_HT(BucketStatsInit(openFiles[indexDesc]->fd, blockCounter));
 		
 		BF_Block_SetDirty(nextBlock);
 		CALL_BF(BF_UnpinBlock(nextBlock));
@@ -332,7 +332,7 @@ HT_ErrorCode arrange_buckets(const int indexDesc,int buddies_number,Record* reco
 	
 	CALL_BF(BF_GetBlockCounter(openFiles[indexDesc]->fd,&newBucketPosition));
 	newBucketPosition--;
-	CALL_HT(BucketStatsInit(indexDesc,newBucketPosition));	//prosthese to bucket se block typou M gia ta stats
+	CALL_HT(BucketStatsInit(openFiles[indexDesc]->fd,newBucketPosition));	//prosthese to bucket se block typou M gia ta stats
 
 
 	//Unpin block since its data is changed
