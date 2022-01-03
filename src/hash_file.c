@@ -400,7 +400,7 @@ HT_ErrorCode HashStatistics(char* filename) {
 	// We found the indexDesc of the file
 	for (int i=0 ; i<openFilesCount ; ++i) {
 		if (strcmp(openFiles[i]->name, filename) == 0) {
-			indexDesc = openFiles[i]->fd;
+			indexDesc = i;
 			break;
 		}
 	}

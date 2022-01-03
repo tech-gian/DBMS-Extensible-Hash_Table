@@ -173,7 +173,7 @@ HT_ErrorCode SHT_BucketStatsInit(int fileDesc, int id) {
 	memcpy(&sizeOfMBlock, data+1+1*sizeof(int), sizeof(int));
 	++sizeOfMBlock;
 	memcpy(data+1+1*sizeof(int), &sizeOfMBlock, sizeof(int));
-    memcpy(data+numberOfChars+numberOfInts*sizeof(int) + (sizeOfMBlock-1)*sizeof(Statistics), stats, sizeof(Statistics));
+    memcpy(data+numberOfChars*sizeof(char)+numberOfInts*sizeof(int) + (sizeOfMBlock-1)*sizeof(Statistics), stats, sizeof(Statistics));
 
 
 	if (oldSizeOfMBlock == numberOfStructs) {
@@ -222,7 +222,7 @@ HT_ErrorCode SHT_BucketStatsUpdate(int indexDesc, int id) {
 
 		// Searching each Statistics of each MBlock to find given id
 		for (int i=0 ; i<numberOfStructs ; ++i) {
-			memcpy(stats, data+numberOfChars+numberOfInts*sizeof(int) + i*sizeof(Statistics), sizeof(Statistics));
+			memcpy(stats, data+numberOfChars*sizeof(char)+numberOfInts*sizeof(int) + i*sizeof(Statistics), sizeof(Statistics));
 
 			if (stats->bucketID == id) {
 				positionDblock = i;
@@ -268,7 +268,7 @@ HT_ErrorCode SHT_BucketStatsUpdate(int indexDesc, int id) {
 	int numberOfInts = mblock == 0 ? 3 : 2;
     int numberOfChars = mblock == 0 ? 22 : 1;
 
-	memcpy(data+ numberOfChars + numberOfInts*sizeof(int) + positionDblock*sizeof(Statistics), stats, sizeof(Statistics));
+	memcpy(data+ numberOfChars*sizeof(char) + numberOfInts*sizeof(int) + positionDblock*sizeof(Statistics), stats, sizeof(Statistics));
 	BF_Block_SetDirty(block);
 	CALL_BF(BF_UnpinBlock(block));
 	BF_Block_Destroy(&block);
