@@ -25,3 +25,6 @@ runsht: sht
 
 valgrind_sht: sht clean
 	valgrind  --leak-check=full --show-leak-kinds=all --track-origins=yes ./build/runner
+
+valgrind_ht: ht clean
+	valgrind  --leak-check=full --show-leak-kinds=all --track-origins=yes ./build/runner

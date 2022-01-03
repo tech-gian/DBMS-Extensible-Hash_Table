@@ -254,7 +254,7 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
 
     int primaryTotalBlocks = 0;
     CALL_BF(BF_GetBlockCounter(primaryFD, &primaryTotalBlocks));
-
+	
     // Just to see how many bytes of ευρετήριο we have
 	int numberOfFlags = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(struct record)*8 + 1);
 	int numberOfBytesFlags = numberOfFlags % (sizeof(char)*8) == 0 ? numberOfFlags / (sizeof(char)*8) : numberOfFlags / (sizeof(char)*8) + 1;
@@ -281,7 +281,7 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
             if (record == NULL) {
                 return HT_ERROR;
             }
-            char flagValue;
+            unsigned char flagValue;
 
             memcpy(&flagValue, data+1+2*sizeof(int) + j/8, sizeof(char));
             flagValue = flagValue << (j%8);
@@ -297,17 +297,21 @@ HT_ErrorCode SHT_CreateSecondaryIndex(const char *sfileName, char *attrName, int
             int tupleId = (i + 1) * numberOfFlags + j;
             SecondaryRecord *sr = malloc(sizeof(*sr));
             sr->tupleId = tupleId;
-
+			
             if(!attrCategory)
                 strncpy(sr->index_key, record->surname, 20);
             else
                 strncpy(sr->index_key, record->city, 20);
-
-            SHT_SecondaryInsertEntry(destIndexSecondary, *sr);
+			
+			//!
+			CALL_BF(BF_UnpinBlock(block));
+			SHT_SecondaryInsertEntry(destIndexSecondary, *sr);
+			CALL_BF(BF_GetBlock(openFiles[destIndexPrimary]->fd, i, block));
+			//!
             free(sr);
             free(record);
         }
-
+		
         CALL_BF(BF_UnpinBlock(block));
         BF_Block_Destroy(&block);
     }
@@ -365,6 +369,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
     if(!pmAlreadyOpen){
         fprintf(stderr, "error: cannot open SHT file \"%s\" as the primary HT file \"%s\" is not currently open\n", sfileName, primaryFileName);
         free(primaryFileName);
+		BF_UnpinBlock(block1);
         CALL_BF(BF_CloseFile(sFileDescriptor));
         return HT_ERROR;
     }
@@ -406,6 +411,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
 	++openSHTFilesCount;
 	*indexDesc = destIndex;
 	
+	BF_UnpinBlock(block1);
 	BF_Block_Destroy(&block1);
 	free(primaryFileName);
     return HT_OK;
@@ -475,7 +481,6 @@ HT_ErrorCode SHT_SecondaryInsertEntry (int indexDesc,SecondaryRecord record) {
 	
 		//if there is free space in the block, insert the new record
 	if (sht_insert_record(&record, indexDesc , block_index) == HT_OK) {
-		
 		return HT_OK;
 	}
 	else {	// if no free space is available
@@ -527,7 +532,6 @@ HT_ErrorCode SHT_SecondaryUpdateEntry (int indexDesc, UpdateRecordArray *updateA
 	SecondaryRecord* secRecord = malloc(sizeof(SecondaryRecord));
 	
 	//* an kapoia thesi edo einai true simainei oti exei allaxthei.Os timi mpainei to neo tuppleId
-	bool* confictsArray = malloc(sizeof(bool)* maxNumberOfRecordsInPrimary);
 
 	// iterate through records in the secondrary indexes and update these records which changed position due to split
 	// do..while since the same must me done for the overflow buckets as well	
@@ -580,7 +584,6 @@ HT_ErrorCode SHT_SecondaryUpdateEntry (int indexDesc, UpdateRecordArray *updateA
 
 					// there is no need to continue the iteration
 					overflowBlock = 0;
-					confictsArray[j] = true; 
 
 					//* giati den theloume na synexisoume to do
 					overflowBlock = 0;
@@ -594,7 +597,6 @@ HT_ErrorCode SHT_SecondaryUpdateEntry (int indexDesc, UpdateRecordArray *updateA
 	}
 
 	free(secRecord);
-	free(confictsArray);
 	BF_Block_Destroy(&block);
 	
 	return HT_OK;

@@ -7,8 +7,8 @@
 #include "sht_file.h"
 
 //! exei elegxthei kai douleuei gia 1000 eggrafes me global depth 1-10
-#define RECORDS_NUM 10000 // you can change it if you want 
-#define GLOBAL_DEPT 10 // you can change it if you want
+#define RECORDS_NUM 1000 // you can change it if you want 
+#define GLOBAL_DEPT 1 // you can change it if you want
 #define PRIMARY_FILE_NAME "data.db"
 #define SECONDARY_FILE_NAME "Sec_data.db"
 #define SECONDARY_FILE_NAME1 "Sec_data1.db"
@@ -131,7 +131,6 @@ int main() {
 
   printf("\n\nRUN PrintSecondary\n");
   CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc, NULL));
-  free(updateArray);
 
   printf("RUN Hashstatistics\n");
   CALL_OR_DIE(HashStatistics(PRIMARY_FILE_NAME));
@@ -167,8 +166,7 @@ int main() {
 
   // Closing open files
   CALL_OR_DIE(HT_CloseFile(indexDesc));
-  // TODO: In this commented file there is pinned block
-  // CALL_OR_DIE(SHT_CloseSecondaryIndex(secIndexDesc));
+  CALL_OR_DIE(SHT_CloseSecondaryIndex(secIndexDesc));
   CALL_OR_DIE(SHT_CloseSecondaryIndex(secIndexDesc1));
 
   // Free memory

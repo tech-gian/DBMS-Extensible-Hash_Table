@@ -38,7 +38,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 	//do..while in case overflow block exists, as i explain in README
 	do{		
 		i=0;
-		BF_GetBlock(openSHTFiles[indexDesc]->fd,blockIndex,nextBlock);
+		CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,blockIndex,nextBlock));
 		char* c = BF_Block_GetData(nextBlock);
 
 		for (i=0;i<total_number_of_records;i++) {
@@ -461,24 +461,25 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc){
 // For example id user tries to insert a record in secondary that does not exist in the primary
 // or if deliberately tries to insert a wrong record
 HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
+	
 
-	// openSHTFiles[indexDesc]->name
 	BF_Block* secBlock;
 	BF_Block_Init(&secBlock);
-
+	
 	// take 's' block
-	BF_GetBlock(openSHTFiles[indexDesc]->fd,0,secBlock);
+
+	CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,0,secBlock));
 
 	// take primary indexes name
 	char* sBlockData = BF_Block_GetData(secBlock);
 	char attributeKey;
 	memcpy(&attributeKey,sBlockData+1+3*sizeof(int),sizeof(char));
 
-	BF_UnpinBlock(secBlock);
+	CALL_BF(BF_UnpinBlock(secBlock));
 
-	char* primaryFileName = malloc(sizeof(char)*20);	//TODO free
-
+	char* primaryFileName = malloc(sizeof(char)*20);
 	memcpy(primaryFileName,sBlockData+2+3*sizeof(int),20);
+
 	
 	//prepei na ta psakso ola kai oxi mexri to openFilesCount
 	// apo auti tin diadikasia pairno to indecDesc tou primary
@@ -504,9 +505,9 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 
 	BF_Block* primaryBlock;	
 	BF_Block_Init(&primaryBlock);
-	BF_GetBlock(openFiles[primaryIndexDesc]->fd,blockInPrimary,primaryBlock);
+	CALL_BF(BF_GetBlock(openFiles[primaryIndexDesc]->fd,blockInPrimary,primaryBlock));
 	char* primaryBlockData = BF_Block_GetData(primaryBlock);
-	BF_UnpinBlock(primaryBlock);
+	CALL_BF(BF_UnpinBlock(primaryBlock));
 	BF_Block_Destroy(&primaryBlock);
 
 	// pairno to flag na do an einai 0. An einai 0 epistrefo HT_ERROR
@@ -552,13 +553,12 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 	
 	unsigned int key;
 	key = key >> (sizeof(int)*8-get_global_depth(openSHTFiles[indexDesc]->fd));
-	
 	// find which bucket corresponds to this key
 	int bucketIndex = sht_find_hash_table_block(indexDesc,key);
-	
-	BF_GetBlock(openSHTFiles[indexDesc]->fd,bucketIndex,secBlock);
+
+	CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,bucketIndex,secBlock));
 	sBlockData = BF_Block_GetData(secBlock);
-	BF_UnpinBlock(secBlock);
+	CALL_BF(BF_UnpinBlock(secBlock));
 	SecondaryRecord* secRecord = malloc(sizeof(SecondaryRecord));
 
 	for(int i=0; i<maxNUmberOfRecordsInSecondary;i++){
