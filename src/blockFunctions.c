@@ -84,7 +84,7 @@ HT_ErrorCode BucketStatsInit(int indexDesc, int id) {
 	BF_Block_Init(&firstBlock);
 
 	// Getting the last MBlock of the file
-	CALL_BF(BF_GetBlock(indexDesc, 0, firstBlock));
+	CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd, 0, firstBlock));
 	char* firstData = BF_Block_GetData(firstBlock);
 
 	char* data;
@@ -92,7 +92,7 @@ HT_ErrorCode BucketStatsInit(int indexDesc, int id) {
 	memcpy(&lastMBlock, firstData+1+2*sizeof(int), sizeof(int));
 
 	if (lastMBlock != 0) {
-		CALL_BF(BF_GetBlock(indexDesc, lastMBlock, mblock));
+		CALL_BF(BF_GetBlock(openFiles[indexDesc]->fd, lastMBlock, mblock));
 		data = BF_Block_GetData(mblock);
 	}
 	else {
@@ -108,10 +108,10 @@ HT_ErrorCode BucketStatsInit(int indexDesc, int id) {
 	numberOfStructs = lastMBlock == 0 ? (BF_BLOCK_SIZE - sizeof(char) - 3*sizeof(int)) / sizeof(Statistics) : (BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) / sizeof(Statistics);
 
     if (oldSizeOfMBlock == numberOfStructs) {
-        CALL_BF(BF_AllocateBlock(indexDesc, newBlock));
+        CALL_BF(BF_AllocateBlock(openFiles[indexDesc]->fd, newBlock));
 		
         int newBlockID;
-        CALL_BF(BF_GetBlockCounter(indexDesc, &newBlockID));
+        CALL_BF(BF_GetBlockCounter(openFiles[indexDesc]->fd, &newBlockID));
 		newBlockID--;
 		memcpy(data+1, &newBlockID, sizeof(int));
 
