@@ -338,8 +338,8 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
 	}
 	
 	// Check if SHT file is already open
-	for (int i=0 ; i<openSHTFilesCount ; ++i) {
-		if (!strcmp(openSHTFiles[i]->name, sfileName)) {
+	for (int i = 0; i < MAX_OPEN_FILES; ++i) {
+		if (openSHTFiles[i] != NULL && !strcmp(openSHTFiles[i]->name, sfileName)) {
 			return HT_ERROR;
 		}
 	}
@@ -359,8 +359,8 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
 
     // Check if primary HT is already open
     int pmAlreadyOpen = 0, pmIndex = 0;
-    for (int i=0 ; i<openFilesCount ; ++i) {
-		if (!strcmp(openFiles[i]->name, primaryFileName)) {
+    for (int i = 0; i < MAX_OPEN_FILES; ++i) {
+		if (openFiles[i] != NULL && !strcmp(openFiles[i]->name, primaryFileName)) {
 			pmAlreadyOpen = 1;
             pmIndex = i;
             break;
@@ -411,7 +411,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
 	++openSHTFilesCount;
 	*indexDesc = destIndex;
 	
-	BF_UnpinBlock(block1);
+    BF_UnpinBlock(block1);
 	BF_Block_Destroy(&block1);
 	free(primaryFileName);
     return HT_OK;

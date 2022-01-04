@@ -73,6 +73,50 @@ int main() {
 	BF_Init(LRU);
   
 	CALL_OR_DIE(HT_Init());
+    CALL_OR_DIE(SHT_Init());
+
+    int a;
+	CALL_OR_DIE(HT_CreateIndex("a", GLOBAL_DEPT));
+	CALL_OR_DIE(HT_OpenIndex("a", &a)); 
+  
+    int A;
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("A","surname",20,GLOBAL_DEPT,"a"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("A", &A));
+
+    int b;
+	CALL_OR_DIE(HT_CreateIndex("b", GLOBAL_DEPT));
+	CALL_OR_DIE(HT_OpenIndex("b", &b)); 
+  
+    int B;
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("B","city",123,4,"b"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("B", &B));
+
+    int c;
+	CALL_OR_DIE(HT_CreateIndex("c", GLOBAL_DEPT));
+	CALL_OR_DIE(HT_OpenIndex("c", &c)); 
+  
+    int C;
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("C","surname",20,GLOBAL_DEPT,"c"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("C", &C));
+
+    CALL_OR_DIE(SHT_CloseSecondaryIndex(B));
+    CALL_OR_DIE(HT_CloseFile(b));
+
+    int d;
+	CALL_OR_DIE(HT_CreateIndex("d", GLOBAL_DEPT));
+	CALL_OR_DIE(HT_OpenIndex("d", &d));
+
+    CALL_OR_DIE(SHT_CloseSecondaryIndex(A));
+    CALL_OR_DIE(HT_CloseFile(a));
+  
+    int D;
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("D","city",20,GLOBAL_DEPT,"d"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("D", &D));
+
+    CALL_OR_DIE(SHT_CloseSecondaryIndex(D));
+    CALL_OR_DIE(HT_CloseFile(d));
+    CALL_OR_DIE(SHT_CloseSecondaryIndex(C));
+    CALL_OR_DIE(HT_CloseFile(c));
 
 	int indexDesc;
 	CALL_OR_DIE(HT_CreateIndex(PRIMARY_FILE_NAME, GLOBAL_DEPT));
@@ -84,7 +128,7 @@ int main() {
 
 
 	Record record;
-  SecondaryRecord secRecord;
+    SecondaryRecord secRecord;
 	srand(12569874);
 	int r;
 
@@ -122,8 +166,8 @@ int main() {
 
 	}
     // int secIndexDesc;
-  // CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
-  // CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
+    // CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
+    // CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
 
 	// printf("RUN PrintAllEntries\n");
 	// int id = rand() % RECORDS_NUM;
