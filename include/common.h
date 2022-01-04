@@ -125,6 +125,8 @@ typedef enum HashKey {
 
 // Η συνάρτηση αυτή παίρνει έναν pointer σε block και τον τύπο του block
 // και κάνει τις σωστές αρχικοποιήσεις στο header και στο ευρετήριο του block.
+// Επίσης παίρνει το attrName και το primaryFilename για να τα αποθηκεύσει στις
+// κατάλληλες θέσεις του header.
 HT_ErrorCode SHT_BlockHeaderInit(BF_Block* block, char type, char* attrName, char* primaryFilename);
 
 // Η συνάρτηση αυτή παίρνει έναν pointer σε block και αλλάζει την τιμή
