@@ -80,24 +80,24 @@ int main() {
 	CALL_OR_DIE(HT_OpenIndex("a", &a)); 
   
     int A;
-    CALL_OR_DIE(SHT_CreateSecondaryIndex("A","surname",20,GLOBAL_DEPT,"a"));
-    CALL_OR_DIE(SHT_OpenSecondaryIndex("A", &A));
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("A2","surname",20,GLOBAL_DEPT,"a"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("A2", &A));
 
     int b;
 	CALL_OR_DIE(HT_CreateIndex("b", GLOBAL_DEPT));
 	CALL_OR_DIE(HT_OpenIndex("b", &b)); 
   
     int B;
-    CALL_OR_DIE(SHT_CreateSecondaryIndex("B","city",123,4,"b"));
-    CALL_OR_DIE(SHT_OpenSecondaryIndex("B", &B));
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("B2","city",123,4,"b"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("B2", &B));
 
     int c;
 	CALL_OR_DIE(HT_CreateIndex("c", GLOBAL_DEPT));
 	CALL_OR_DIE(HT_OpenIndex("c", &c)); 
   
     int C;
-    CALL_OR_DIE(SHT_CreateSecondaryIndex("C","surname",20,GLOBAL_DEPT,"c"));
-    CALL_OR_DIE(SHT_OpenSecondaryIndex("C", &C));
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("C2","surname",20,GLOBAL_DEPT,"c"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("C2", &C));
 
     CALL_OR_DIE(SHT_CloseSecondaryIndex(B));
     CALL_OR_DIE(HT_CloseFile(b));
@@ -110,8 +110,8 @@ int main() {
     CALL_OR_DIE(HT_CloseFile(a));
   
     int D;
-    CALL_OR_DIE(SHT_CreateSecondaryIndex("D","city",20,GLOBAL_DEPT,"d"));
-    CALL_OR_DIE(SHT_OpenSecondaryIndex("D", &D));
+    CALL_OR_DIE(SHT_CreateSecondaryIndex("D2","city",20,GLOBAL_DEPT,"d"));
+    CALL_OR_DIE(SHT_OpenSecondaryIndex("D2", &D));
 
     CALL_OR_DIE(SHT_CloseSecondaryIndex(D));
     CALL_OR_DIE(HT_CloseFile(d));

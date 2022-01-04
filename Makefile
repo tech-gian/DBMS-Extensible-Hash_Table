@@ -15,7 +15,7 @@ myMain: clean
 	gcc -g -Werror  -I ./include/ -L ./lib/ -Wl,-rpath,./lib/ ./examples/my_main.c ./src/hash_file.c ./src/common.c ./src/blockFunctions.c -lbf -o ./build/runner -O2
 
 clean:
-	rm -rf build/runner data.db data1.db Sec_data.db Sec_data1.db
+	rm -rf build/runner data.db data1.db Sec_data.db Sec_data1.db a A2 b B2	c C2 d D2
 
 run: ht
 	./build/runner

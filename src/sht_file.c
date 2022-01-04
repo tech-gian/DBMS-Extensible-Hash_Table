@@ -369,7 +369,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
     if(!pmAlreadyOpen){
         fprintf(stderr, "error: cannot open SHT file \"%s\" as the primary HT file \"%s\" is not currently open\n", sfileName, primaryFileName);
         free(primaryFileName);
-		BF_UnpinBlock(block1);
+		CALL_BF(BF_UnpinBlock(block1));
         CALL_BF(BF_CloseFile(sFileDescriptor));
         return HT_ERROR;
     }
@@ -411,7 +411,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
 	++openSHTFilesCount;
 	*indexDesc = destIndex;
 	
-    BF_UnpinBlock(block1);
+	CALL_BF(BF_UnpinBlock(block1));
 	BF_Block_Destroy(&block1);
 	free(primaryFileName);
     return HT_OK;
