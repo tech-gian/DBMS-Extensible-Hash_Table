@@ -214,5 +214,6 @@ int main() {
   CALL_OR_DIE(SHT_CloseSecondaryIndex(secIndexDesc1));
 
   // Free memory
+  BF_Close();
   free(updateArray);
 }
