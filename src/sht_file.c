@@ -426,6 +426,7 @@ HT_ErrorCode SHT_CloseSecondaryIndex(int indexDesc) {
 
 	if (openSHTFiles[indexDesc]->name != NULL) {
 		free(openSHTFiles[indexDesc]->name);
+		free(openSHTFiles[indexDesc]->primaryName);
 	}
 	free(openSHTFiles[indexDesc]);
     openSHTFiles[indexDesc] = NULL;
@@ -625,7 +626,7 @@ HT_ErrorCode SHT_PrintAllEntries(int sindexDesc, char *index_key ) {
 			char type;
 			memcpy(&type, data, sizeof(char));
 
-			// We don't care about 'H', 'M' or 'm' blocks
+			// We don't care about 'H', 'M' or 's' blocks
 			if (type == 'H' || type == 'M' || type == 's') {
 				CALL_BF(BF_UnpinBlock(block));
 				BF_Block_Destroy(&block);
@@ -779,7 +780,7 @@ HT_ErrorCode SHT_HashStatistics(char *filename) {
 	return HT_OK;
 }
 
-HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
+HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char* index_key) {
 	if (sindexDesc1 >= openSHTFilesCount || sindexDesc2 >= openSHTFilesCount) {
 		return HT_ERROR;
 	}
@@ -816,11 +817,12 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 
 			
 			// Creating an array for all possible index_keys
-			char index_keys[20][20];
-			for (int j=0 ; j<20 ; ++j) {
+			char index_keys[numberOfFlags][20];
+			for (int j=0 ; j<numberOfFlags ; ++j) {
 				strcpy(index_keys[j], "");
 			}
 			
+			// For each SecondaryRecord, we check if it has already displayed
 			for (int j=0 ; j<numberOfFlags ; ++j) {
 				unsigned char flagValue;
 				memcpy(&flagValue, data+1+2*sizeof(int)+j/8, sizeof(char));
@@ -833,7 +835,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 
 					int pos = -1;
 					// Looping through the array for same index_key
-					for (int t=0 ; t<20 ; ++t) {
+					for (int t=0 ; t<numberOfFlags ; ++t) {
 						if (strcmp(index_keys[t], "") == 0) {
 							strcpy(index_keys[t], record->index_key);
 							pos = t;
@@ -845,6 +847,9 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 						}
 					}
 
+					// If it isn't displayed, we display it now,
+					// with all records in the second file, that have
+					// the same index_key
 					if (pos != -1) {
 						SecondaryRecord* record1 = malloc(sizeof(SecondaryRecord));
 						if (record1 == NULL) {
@@ -871,6 +876,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 						printf("\t");
 
 						// Second file
+						// We are only looking at one block, based on the instructions
 						printf("File2: ");
 						int globalDepth = get_global_depth(openSHTFiles[sindexDesc2]->fd);
 						unsigned int key = hash_string(index_keys[pos]);
@@ -922,6 +928,9 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char *index_key) {
 
 
 	// Else we print for specific index_key
+	// We are looking for same index_key in both files,
+	// only in one block(based on the instructions),
+	// which we find with the hash_function
 
 	int globalDepth1 = get_global_depth(openSHTFiles[sindexDesc1]->fd);
 	unsigned int key1 = hash_string(index_key);

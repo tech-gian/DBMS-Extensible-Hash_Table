@@ -134,6 +134,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 		CALL_BF(BF_UnpinBlock(nextBlock));
 		BF_Block_Destroy(&nextBlock);
 
+		free(currentIndexKey);
 		return HT_OK;
 	}
 	BF_Block_Destroy(&nextBlock);
