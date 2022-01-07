@@ -549,6 +549,8 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 				return HT_ERROR;
 			}
 		}
+		BF_UnpinBlock(primaryBlock);
+		BF_Block_Destroy(&primaryBlock);
 
 	}
 
