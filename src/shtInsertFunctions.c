@@ -85,8 +85,9 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 
 		memcpy(&overflowBlock,c+1,sizeof(int));
 		if(overflowBlock != 0 ){
-			blockIndex = overflowBlock;}
-		CALL_BF(BF_UnpinBlock(nextBlock));
+			blockIndex = overflowBlock;
+		}
+		CALL_BF(BF_UnpinBlock(nextBlock));	//todo des ayto
 
 	}while(overflowBlock != 0);
 	free(rec);
@@ -119,7 +120,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 		CALL_HT(SHT_BucketStatsInit(openSHTFiles[indexDesc]->fd, blockCounter));
 		
 		BF_Block_SetDirty(nextBlock);
-		CALL_BF(BF_UnpinBlock(nextBlock));
+		// CALL_BF(BF_UnpinBlock(nextBlock));
 
 		char* newData = BF_Block_GetData(newBlock);
 		memcpy(newData+1+2*sizeof(int)+indexes_bytes,record,sizeof(SecondaryRecord));
@@ -428,7 +429,7 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc){
 		memcpy(&newHT , c+1,sizeof(int));
 		
 		BF_Block_SetDirty(block);
-		CALL_BF(BF_UnpinBlock(block));
+		
 		
 		//an exoume akoma eggrafes na prosthesoume alla oxi diathesimo block gia to hash table, ftiaxnoume ena
 		if((newHT==0) && (j< arrayCounter)){
@@ -451,6 +452,9 @@ HT_ErrorCode sht_extend_hash_table(int indexDesc){
 			newHT = blockCounter;
 			BF_Block_Destroy(&newHashBlock);
 		}
+
+		CALL_BF(BF_UnpinBlock(block));
+
 	}while( j < arrayCounter );
 	free(indexArray);
 	BF_Block_Destroy(&block);
@@ -506,10 +510,10 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 
 	BF_Block* primaryBlock;	
 	BF_Block_Init(&primaryBlock);
-	CALL_BF(BF_GetBlock(openFiles[primaryIndexDesc]->fd,blockInPrimary,primaryBlock));
+	CALL_BF(BF_GetBlock(openFiles[primaryIndexDesc]->fd,blockInPrimary,primaryBlock));	//todo unpin
 	char* primaryBlockData = BF_Block_GetData(primaryBlock);
-	CALL_BF(BF_UnpinBlock(primaryBlock));
-	BF_Block_Destroy(&primaryBlock);
+	
+	// BF_Block_Destroy(&primaryBlock);	//todo na ginei
 
 	// pairno to flag na do an einai 0. An einai 0 epistrefo HT_ERROR
 	unsigned char flagValue;
@@ -523,6 +527,7 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 	if (flagValue == 0){
 		fprintf(stderr,"Error: Invalid tupleId. Position in block is invalid\n");
 		BF_Block_Destroy(&secBlock);
+		BF_UnpinBlock(primaryBlock);
 		return HT_ERROR;
 	}else{
 		Record primaryRecord;
@@ -531,12 +536,16 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 			if(strcmp(record.index_key,primaryRecord.surname) != 0){
 				fprintf(stderr,"Error: Invalid tupleId. Position in block is invalid\n");
 				BF_Block_Destroy(&secBlock);
+				BF_UnpinBlock(primaryBlock);
+				BF_Block_Destroy(&primaryBlock);
 				return HT_ERROR;
 			}
 		}else if(attributeKey == 1){
 			if(strcmp(record.index_key,primaryRecord.city) != 0){
 				fprintf(stderr,"Error: Invalid tupleId. Position in block is invalid\n");
 				BF_Block_Destroy(&secBlock);
+				BF_UnpinBlock(primaryBlock);
+				BF_Block_Destroy(&primaryBlock);
 				return HT_ERROR;
 			}
 		}
@@ -559,7 +568,7 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 
 	CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,bucketIndex,secBlock));
 	sBlockData = BF_Block_GetData(secBlock);
-	CALL_BF(BF_UnpinBlock(secBlock));
+	// CALL_BF(BF_UnpinBlock(secBlock));
 	SecondaryRecord* secRecord = malloc(sizeof(SecondaryRecord));
 
 	for(int i=0; i<maxNUmberOfRecordsInSecondary;i++){
@@ -574,11 +583,13 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 		memcpy(secRecord,sBlockData+1+2*sizeof(int)+indexesBytesInSec+i*sizeof(SecondaryRecord),sizeof(SecondaryRecord));
 		if(secRecord->tupleId == record.tupleId){
 			fprintf(stderr,"Error: call SHT_SecondaryUpdateEntry and try again\n");
+			CALL_BF(BF_UnpinBlock(secBlock));
 			BF_Block_Destroy(&secBlock);
 			return HT_ERROR;
 		}
 	}
 	free(secRecord);
+	CALL_BF(BF_UnpinBlock(secBlock));
 	BF_Block_Destroy(&secBlock);
 	return HT_OK;
 }
