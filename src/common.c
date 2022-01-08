@@ -606,7 +606,7 @@ HT_ErrorCode extend_hash_table(int indexDesc){
 		memcpy(&newHT , c+1,sizeof(int));
 		
 		BF_Block_SetDirty(block);
-		CALL_BF(BF_UnpinBlock(block));
+		
 		
 		//an exoume akoma eggrafes na prosthesoume alla oxi diathesimo block gia to hash table, ftiaxnoume ena
 		if((newHT==0) && (j< arrayCounter)){
@@ -630,6 +630,8 @@ HT_ErrorCode extend_hash_table(int indexDesc){
 			newHT = blockCounter;
 			BF_Block_Destroy(&newHashBlock);
 		}
+	
+	CALL_BF(BF_UnpinBlock(block));
 	}while( j < arrayCounter );
 	free(indexArray);
 	BF_Block_Destroy(&block);
