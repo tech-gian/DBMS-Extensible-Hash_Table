@@ -418,7 +418,7 @@ HT_ErrorCode SHT_OpenSecondaryIndex(const char *sfileName, int *indexDesc) {
 }
 
 HT_ErrorCode SHT_CloseSecondaryIndex(int indexDesc) {
-	if (indexDesc >= MAX_OPEN_FILES) {
+	if (indexDesc >= MAX_OPEN_FILES || openSHTFiles[indexDesc] == NULL) {
 		return HT_ERROR;
 	}
 
@@ -426,6 +426,8 @@ HT_ErrorCode SHT_CloseSecondaryIndex(int indexDesc) {
 
 	if (openSHTFiles[indexDesc]->name != NULL) {
 		free(openSHTFiles[indexDesc]->name);
+	}
+    if (openSHTFiles[indexDesc]->primaryName != NULL) {
 		free(openSHTFiles[indexDesc]->primaryName);
 	}
 	free(openSHTFiles[indexDesc]);
