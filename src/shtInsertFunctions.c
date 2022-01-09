@@ -4,7 +4,7 @@
 #include "sht_blockFunctions.h"
 // #include "hash_file.h"
 
-// from chatziko
+// from chatziko, online source
 uint hash_string(char* value) {
 	// djb2 hash function, απλή, γρήγορη, και σε γενικές γραμμές αποδοτική
     uint hash = 5381;
@@ -72,11 +72,9 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 				memcpy(rec,c+1+2*sizeof(int)+indexes_bytes+i*sizeof(SecondaryRecord),sizeof(SecondaryRecord));
 				if((strcmp(rec->index_key,currentIndexKey) != 0 )&& (strcmp(currentIndexKey,"NONE") != 0) ){
 					overflowFlag = false;
-					// currentId = rec->index_key;
 					strcpy(currentIndexKey,rec->index_key);
 				}
 				else if(first == false){
-					// currentId = rec->index_key;
 					strcpy(currentIndexKey,rec->index_key);
 					first = true;
 				}
@@ -120,7 +118,7 @@ HT_ErrorCode sht_insert_record(SecondaryRecord* record, int indexDesc, int block
 		CALL_HT(SHT_BucketStatsInit(openSHTFiles[indexDesc]->fd, blockCounter));
 		
 		BF_Block_SetDirty(nextBlock);
-		// CALL_BF(BF_UnpinBlock(nextBlock));
+
 
 		char* newData = BF_Block_GetData(newBlock);
 		memcpy(newData+1+2*sizeof(int)+indexes_bytes,record,sizeof(SecondaryRecord));
@@ -510,10 +508,9 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 
 	BF_Block* primaryBlock;	
 	BF_Block_Init(&primaryBlock);
-	CALL_BF(BF_GetBlock(openFiles[primaryIndexDesc]->fd,blockInPrimary,primaryBlock));	//todo unpin
+	CALL_BF(BF_GetBlock(openFiles[primaryIndexDesc]->fd,blockInPrimary,primaryBlock));
 	char* primaryBlockData = BF_Block_GetData(primaryBlock);
 	
-	// BF_Block_Destroy(&primaryBlock);	//todo na ginei
 
 	// pairno to flag na do an einai 0. An einai 0 epistrefo HT_ERROR
 	unsigned char flagValue;
@@ -570,7 +567,7 @@ HT_ErrorCode validateInsertion(int indexDesc,SecondaryRecord record){
 
 	CALL_BF(BF_GetBlock(openSHTFiles[indexDesc]->fd,bucketIndex,secBlock));
 	sBlockData = BF_Block_GetData(secBlock);
-	// CALL_BF(BF_UnpinBlock(secBlock));
+
 	SecondaryRecord* secRecord = malloc(sizeof(SecondaryRecord));
 
 	for(int i=0; i<maxNUmberOfRecordsInSecondary;i++){

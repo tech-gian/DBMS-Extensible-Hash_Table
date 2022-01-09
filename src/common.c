@@ -624,7 +624,6 @@ HT_ErrorCode extend_hash_table(int indexDesc){
 
 
 			memcpy(c+1,&(blockCounter),sizeof(int));	//bazo to palio hash table na deixnei to kainourgio
-			// BF_Block_SetDirty(newHashBlock);
 			CALL_BF(BF_UnpinBlock(newHashBlock));
 
 			newHT = blockCounter;

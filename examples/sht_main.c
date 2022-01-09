@@ -6,8 +6,7 @@
 #include "hash_file.h"
 #include "sht_file.h"
 
-//! exei elegxthei kai douleuei gia 1000 eggrafes me global depth 1-10
-#define RECORDS_NUM 1000 // you can change it if you want 
+#define RECORDS_NUM 10 // you can change it if you want 
 #define GLOBAL_DEPT 1 // you can change it if you want
 #define PRIMARY_FILE_NAME "data.db"
 #define SECONDARY_FILE_NAME "Sec_data.db"
@@ -118,32 +117,41 @@ int main() {
     CALL_OR_DIE(SHT_CloseSecondaryIndex(C));
     CALL_OR_DIE(HT_CloseFile(c));
 
+  // dimiourgia arxeiou epektatou katakermatismou
 	int indexDesc;
 	CALL_OR_DIE(HT_CreateIndex(PRIMARY_FILE_NAME, GLOBAL_DEPT));
 	CALL_OR_DIE(HT_OpenIndex(PRIMARY_FILE_NAME, &indexDesc)); 
   
+  //dimiourgia deutereuontos eurethriou sto pedio surname
   int secIndexDesc;
-  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME, "city", 20, GLOBAL_DEPT, PRIMARY_FILE_NAME));
+  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME, "surname", 20, GLOBAL_DEPT, PRIMARY_FILE_NAME));
   CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
 
 
+  // eisagogi  endeiktikon eggrafon  sto HT kai sto SHT 
 	Record record;
-    SecondaryRecord secRecord;
+  SecondaryRecord secRecord;
 	srand(12569874);
 	int r;
 
 	int tuppleId;
+  
+  int numberOfFlags = ((BF_BLOCK_SIZE - sizeof(char) - 2*sizeof(int)) * 8) / (sizeof(Record)*8 + 1);
 	
 	UpdateRecordArray* updateArray;
-	updateArray = malloc(sizeof(UpdateRecordArray)*8);
-	for (int i=0;i<8;i++){
+	updateArray = malloc(sizeof(UpdateRecordArray)*numberOfFlags);
+	for (int i=0;i<numberOfFlags;i++){
 		updateArray[i].oldTupleId = -1;
 		updateArray[i].newTupleId = -1;
 	}
 
+  char secondaryKey[20];
+
 	printf("Insert Entries\n");
-	for (int id = 0; id < RECORDS_NUM; ++id) {
-    for (int i=0;i<8;i++){
+  int id;
+	for (id = 0; id < RECORDS_NUM; ++id) {
+    
+    for (int i=0;i<numberOfFlags;i++){
 		updateArray[i].oldTupleId = -1;
 		updateArray[i].newTupleId = -1;
 	}
@@ -153,10 +161,13 @@ int main() {
 		memcpy(record.name, names[r], strlen(names[r]) + 1);
 		r = rand() % 12;
 		memcpy(record.surname, surnames[r], strlen(surnames[r]) + 1);
+    strcpy(secondaryKey, surnames[r]);
 		r = rand() % 10;
 		memcpy(record.city, cities[r], strlen(cities[r]) + 1);
+
+
 		CALL_OR_DIE(HT_InsertEntry(indexDesc, record,&tuppleId,updateArray));
-    strcpy(secRecord.index_key,record.city);
+    strcpy(secRecord.index_key,record.surname);
     secRecord.tupleId = tuppleId;
     
     if(updateArray[0].newTupleId != -1){
@@ -165,47 +176,72 @@ int main() {
     CALL_OR_DIE(SHT_SecondaryInsertEntry(secIndexDesc,secRecord));
 
 	}
-    // int secIndexDesc;
-    // CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME,"city",20,GLOBAL_DEPT,PRIMARY_FILE_NAME));
-    // CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME, &secIndexDesc)); 
 
-	// printf("RUN PrintAllEntries\n");
-	// int id = rand() % RECORDS_NUM;
-	CALL_OR_DIE(HT_PrintAllEntries(indexDesc, NULL));
+  //bima 4
+	int primaryId = rand() % RECORDS_NUM;
+	printf("RUN PrintAllEntries with id = %d\n",primaryId);
+  CALL_OR_DIE(HT_PrintAllEntries(indexDesc, &primaryId));
 
-  printf("\n\nRUN PrintSecondary\n");
-  CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc, NULL));
+  //bima 5
+  printf("\n\nRUN PrintSecondary with key: %s\n",secondaryKey);
+  CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc, secondaryKey));
 
+  //* eisagogi neas eggrafis sto primary kai to secondary hash table
+  
+  // arxikopoiisi tou updateArray
+  for (int i=0;i<numberOfFlags;i++){
+		updateArray[i].oldTupleId = -1;
+		updateArray[i].newTupleId = -1;
+	}
+  
+  // dimiourgia eggrafis
+  record.id = id;
+  r = rand() % 12;
+  memcpy(record.name, names[r], strlen(names[r]) + 1);
+  r = rand() % 12;
+  memcpy(record.surname, surnames[r], strlen(surnames[r]) + 1);
+  r = rand() % 10;
+  memcpy(record.city, cities[r], strlen(cities[r]) + 1);
+  CALL_OR_DIE(HT_InsertEntry(indexDesc, record,&tuppleId,updateArray));
+  strcpy(secRecord.index_key,record.surname);
+  secRecord.tupleId = tuppleId;
+  
+  if(updateArray[0].newTupleId != -1){
+    SHT_SecondaryUpdateEntry(secIndexDesc,updateArray);
+  }
+  CALL_OR_DIE(SHT_SecondaryInsertEntry(secIndexDesc,secRecord));
+
+  //bima 4
+	printf("RUN PrintAllEntries with id = %d\n",id);
+  CALL_OR_DIE(HT_PrintAllEntries(indexDesc, &id));
+
+  
+
+  //bima 5
+  printf("\n\nRUN PrintSecondary with key: %s\n",secondaryKey);
+  CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc, secondaryKey));
+
+
+
+
+  printf("\n\nRUN SHT_InnerJoin\n");
+
+  // dimiourgia neou secondary hash table gia tin inner join
+  int secIndexDesc1;
+  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME1, "city", 20, GLOBAL_DEPT, PRIMARY_FILE_NAME));
+  CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME1, &secIndexDesc1));
+
+  CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, "Miami"));
+
+  CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, NULL));
+
+  // ektyposi statistikon
   printf("RUN Hashstatistics\n");
   CALL_OR_DIE(HashStatistics(PRIMARY_FILE_NAME));
   
   printf("\n\nRUN SHT_hash statistics\n");
   CALL_OR_DIE(SHT_HashStatistics(SECONDARY_FILE_NAME));
-  // int indexDesc1;
 
-  // CALL_OR_DIE(HT_CreateIndex(PRIMARY_FILE_NAME1, GLOBAL_DEPT));
-	// CALL_OR_DIE(HT_OpenIndex(PRIMARY_FILE_NAME1, &indexDesc1));
-  // HashStatistics(PRIMARY_FILE_NAME1);
-
-  // int secIndexDesc1;
-  // CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME1, "city", 20, GLOBAL_DEPT, PRIMARY_FILE_NAME));
-  // CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME1, &secIndexDesc1));
-
-  // CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, NULL));
-  
-
-  printf("\n\nRUN SHT_InnerJoin\n");
-
-  int secIndexDesc1;
-  CALL_OR_DIE(SHT_CreateSecondaryIndex(SECONDARY_FILE_NAME1, "city", 20, GLOBAL_DEPT, PRIMARY_FILE_NAME));
-  CALL_OR_DIE(SHT_OpenSecondaryIndex(SECONDARY_FILE_NAME1, &secIndexDesc1));
-
-  printf("\n\nRUN PrintSecondary\n");
-  CALL_OR_DIE(SHT_PrintAllEntries(secIndexDesc1, NULL));
-
-  CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, "Miami"));
-
-  CALL_OR_DIE(SHT_InnerJoin(secIndexDesc, secIndexDesc1, NULL));
 
 
   // Closing open files
