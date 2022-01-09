@@ -2,31 +2,9 @@
 #define HASH_FILE_H
 
 #include "bf.h"
-// #include "sht_file.h"
 #include "usefull.h"
 
 #define MAX_OPEN_FILES 20
-
-// typedef enum HT_ErrorCode {
-//   HT_OK,
-//   HT_ERROR
-// } HT_ErrorCode;
-
-// typedef struct Record {
-// 	int id;
-// 	char name[15];
-// 	char surname[20];
-// 	char city[20];
-// } Record;
-
-// typedef struct {  //μπορειτε να αλλαξετε τη δομη συμφωνα  με τις ανάγκες σας
-// 	char surname[20];
-// 	char city[20];
-// 	int oldTupleId; // η παλια θέση της εγγραφής πριν την εισαγωγή της νέας
-// 	int newTupleId; // η νέα θέση της εγγραφής που μετακινήθηκε μετα την εισαγωγή της νέας εγγραφής 
-	
-// } UpdateRecordArray;
-
 
 /*
  * Η συνάρτηση HT_Init χρησιμοποιείται για την αρχικοποίηση κάποιον δομών που μπορεί να χρειαστείτε. 

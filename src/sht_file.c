@@ -1,7 +1,7 @@
 #include "bf.h"
 #include "common.h"
 #include "sht_blockFunctions.h"
-// #include "usefull.h"
+
 
 #define MAX_OPEN_FILES 20
 
@@ -17,24 +17,6 @@
 // #ifndef HASH_FILE_H
 #define HASH_FILE_H
 
-
-// typedef enum HT_ErrorCode {
-//   HT_OK,
-//   HT_ERROR
-// } HT_ErrorCode;
-
-
-// typedef struct Record {
-// 	int id;
-// 	char name[15];
-// 	char surname[20];
-// 	char city[20];
-// } Record;
-
-// typedef struct{
-// 	char index_key[20];
-// 	int tupleId;  /*Ακέραιος που προσδιορίζει το block και τη θέση μέσα στο block στην οποία     έγινε η εισαγωγή της εγγραφής στο πρωτεύον ευρετήριο.*/ 
-// }SecondaryRecord;
 
 
 
@@ -493,7 +475,7 @@ HT_ErrorCode SHT_SecondaryInsertEntry (int indexDesc,SecondaryRecord record) {
 																		// increase bucket's depth
 																		// re-insert record
 		}
-		else{	//aextend hash table and try to re-insert the record
+		else{	//extend hash table and try to re-insert the record
 		
 			sht_extend_hash_table(indexDesc);
 			return SHT_SecondaryInsertEntry(indexDesc,record);
@@ -667,13 +649,14 @@ HT_ErrorCode SHT_PrintAllEntries(int sindexDesc, char *index_key ) {
 
 	// Else we print the Records that have the same id with the given one
 
-	int globalDepth = get_global_depth(sindexDesc);
+	int globalDepth = get_global_depth(openSHTFiles[sindexDesc]->fd);
 	unsigned int key = hash_string(index_key);
 	key = key >> (sizeof(int)*8 - globalDepth);
 	if (globalDepth == 0) {
 		key = 0;
 	}
 	int dataBlockPointer = sht_find_hash_table_block(sindexDesc, key);
+
 
 	BF_Block* block;
 	BF_Block_Init(&block);
@@ -683,7 +666,7 @@ HT_ErrorCode SHT_PrintAllEntries(int sindexDesc, char *index_key ) {
 
 	// Checking about overflowBlocks (in README we explain why they exist)
 	do {
-		CALL_BF(BF_GetBlock(sindexDesc, dataBlockPointer, block));
+		CALL_BF(BF_GetBlock(openSHTFiles[sindexDesc]->fd, dataBlockPointer, block));
 		char* data = BF_Block_GetData(block);
 		memcpy(&overflowBlock, data+1, sizeof(int));
 
@@ -692,7 +675,7 @@ HT_ErrorCode SHT_PrintAllEntries(int sindexDesc, char *index_key ) {
 			unsigned char flagValue;
 			memcpy(&flagValue,data+1+2*sizeof(int)+i/8,sizeof(char));
 
-			flagValue = flagValue << i;
+			flagValue = flagValue << (i%8);
 			flagValue = flagValue >>(sizeof(char)*8-1);
 
 			if (flagValue == 1) {
@@ -792,7 +775,7 @@ HT_ErrorCode SHT_InnerJoin(int sindexDesc1, int sindexDesc2, char* index_key) {
 	int numberOfBytesFlags = numberOfFlags % (sizeof(char)*8) == 0 ? numberOfFlags / (sizeof(char)*8) : numberOfFlags / (sizeof(char)*8) + 1;
 
 
-	// TODO: Add comments
+
 	if (index_key == NULL) {
 		int numberOfBlocks;
 		CALL_BF(BF_GetBlockCounter(openSHTFiles[sindexDesc1]->fd, &numberOfBlocks));

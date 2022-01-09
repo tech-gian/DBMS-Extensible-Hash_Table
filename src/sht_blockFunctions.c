@@ -1,9 +1,6 @@
 #include "sht_blockFunctions.h"
 
 
-// TODO: CHECK all files. Where you use indexDesc (position in the array) instead of the FileDesc returned from BF_CreateFile(), CHANGE IT
-
-
 
 HT_ErrorCode SHT_BlockHeaderInit(BF_Block* block, char type, char* attrName, char* primaryFilename) {
 	char* data = BF_Block_GetData(block);
@@ -67,7 +64,6 @@ HT_ErrorCode SHT_BlockHeaderInit(BF_Block* block, char type, char* attrName, cha
 			char lastChar = '\0';
 			memcpy(data+2+3*sizeof(int)+19*sizeof(char), &lastChar, sizeof(char));
 		}
-        // TODO: Add this to documentation
 		break;
 	}
 	BF_Block_SetDirty(block);
